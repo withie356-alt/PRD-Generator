@@ -42,6 +42,7 @@ export default function PRDPromptGenerator() {
   const [basicInfoSummary, setBasicInfoSummary] = useState<string>('');
   const [iterationSummary, setIterationSummary] = useState<string>('');
   const [prdSummary, setPrdSummary] = useState<string>('');
+  const [progress, setProgress] = useState<number>(0); // 진행률 (0-100)
 
   // 채팅 스크롤 자동화를 위한 ref
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -156,6 +157,46 @@ export default function PRDPromptGenerator() {
     { id: 4, name: '사용자 스토리', icon: CheckCircle },
     { id: 5, name: 'PRD 생성', icon: Zap }
   ];
+
+  // 원형 진행률 표시 컴포넌트
+  const CircularProgress = ({ percentage }: { percentage: number }) => {
+    const radius = 40;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (percentage / 100) * circumference;
+
+    return (
+      <div className="relative inline-flex items-center justify-center">
+        <svg width="120" height="120" className="transform -rotate-90">
+          {/* 배경 원 */}
+          <circle
+            cx="60"
+            cy="60"
+            r={radius}
+            stroke="#e5e7eb"
+            strokeWidth="8"
+            fill="none"
+          />
+          {/* 진행률 원 */}
+          <circle
+            cx="60"
+            cy="60"
+            r={radius}
+            stroke="#3b82f6"
+            strokeWidth="8"
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            className="transition-all duration-500 ease-out"
+          />
+        </svg>
+        {/* 가운데 퍼센트 숫자 */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-2xl font-bold text-blue-600">{percentage}%</span>
+        </div>
+      </div>
+    );
+  };
 
   // API 테스트 함수
   const testGeminiAPI = async () => {
@@ -1117,17 +1158,21 @@ ${interaction}
   // Step 3: 이터레이션 계획 생성
   const generateIterationPlan = async () => {
     setIsProcessing(true);
+    setProgress(0);
 
     // Step 2 → Step 3 전환 시 AI 디자인 보정
     console.log('🎨 Step 2 완료 - AI 디자인 보정 시작...');
+    setProgress(5);
     await enrichDesignWithAI();
 
+    setProgress(10);
     setCurrentStep(3); // Step 3으로 전환
     setModificationHistory([]); // 수정 기록 초기화
     setModificationRequest('');
     console.log('🤖 이터레이션 계획 생성 시작...');
 
     if (useRealAI && geminiApiKey) {
+      setProgress(15);
       const basicInfoAnswers = chatMessages
         .filter(m => m.type === 'user')
         .map((m, i) => `질문 ${i + 1} 답변: ${m.content}`)
@@ -1138,6 +1183,7 @@ ${interaction}
         .map((m, i) => `상세 질문 ${i + 1} 답변: ${m.content}`)
         .join('\n');
 
+      setProgress(20);
       const prompt = `당신은 Agile 방법론 전문가이자 PRD 작성 전문가입니다.
 다음 정보를 바탕으로 Agile Iteration Planning 방식으로 3단계 이터레이션 계획을 작성해주세요.
 
@@ -1238,12 +1284,15 @@ ${enrichedDesignSystem ? `\n구체화된 디자인 시스템 (AI 보정):\n${enr
 
 각 이터레이션은 독립적으로 배포 가능하고 사용자에게 가치를 전달할 수 있어야 합니다.`;
 
+      setProgress(30);
       const result = await callGeminiAPI(prompt);
 
+      setProgress(70);
       if (result) {
         setIterationPlan(result);
 
         // AI에게 요약 생성 요청
+        setProgress(75);
         const summaryPrompt = `다음 이터레이션 계획을 3개 이터레이션별로 각각 2-3문장으로 간결하게 요약해주세요.
 
 **중요**: 반드시 아래 형식을 정확히 따라주세요. 각 이터레이션 사이에 빈 줄(\\n\\n)을 넣어주세요.
@@ -1264,12 +1313,15 @@ ${enrichedDesignSystem ? `\n구체화된 디자인 시스템 (AI 보정):\n${enr
 이터레이션 계획:
 ${result}`;
 
+        setProgress(80);
         const summaryResult = await callGeminiAPI(summaryPrompt);
+        setProgress(95);
         if (summaryResult) {
           setIterationSummary(summaryResult);
         }
       }
 
+      setProgress(100);
       setIsProcessing(false);
     } else {
       setTimeout(() => {
@@ -1359,12 +1411,14 @@ ${result}`;
   // Step 4: 사용자 스토리 생성
   const generateUserStories = async () => {
     setIsProcessing(true);
+    setProgress(0);
     setCurrentStep(4); // 즉시 Step 4로 전환
     setModificationHistory([]); // 수정 기록 초기화
     setModificationRequest('');
     console.log('🤖 사용자 스토리 생성 시작...');
 
     if (useRealAI && geminiApiKey) {
+      setProgress(10);
       const basicInfoAnswers = chatMessages
         .filter(m => m.type === 'user')
         .map((m, i) => `질문 ${i + 1} 답변: ${m.content}`)
@@ -1445,7 +1499,9 @@ ${iterationPlan}
 각 스토리는 이터레이션 1의 MVP 범위에 포함되며, 독립적으로 개발/배포 가능해야 합니다.
 모든 스토리는 실제 사용자 가치를 제공하고 테스트 가능한 인수 기준을 포함해야 합니다.`;
 
+      setProgress(30);
       const result = await callGeminiAPI(prompt);
+      setProgress(100);
       setIsProcessing(false);
 
       if (result) {
@@ -1564,12 +1620,14 @@ ${iterationPlan}
   // Step 5: 최종 PRD 생성
   const generateFinalPRD = async () => {
     setIsProcessing(true);
+    setProgress(0);
     setCurrentStep(5); // 즉시 Step 5로 전환
     setModificationHistory([]); // 수정 기록 초기화
     setModificationRequest('');
     console.log('🤖 최종 PRD 생성 시작...');
 
     if (useRealAI && geminiApiKey) {
+      setProgress(5);
       const basicInfoAnswers = chatMessages
         .filter(m => m.type === 'user')
         .map((m, i) => `질문 ${i + 1} 답변: ${m.content}`)
@@ -2394,12 +2452,15 @@ const fetch[DataName] = async () => {
 
 이 PRD는 실제 개발에 즉시 활용 가능한 수준으로 작성되었습니다.`;
 
+      setProgress(20);
       const result = await callGeminiAPI(prompt);
 
+      setProgress(70);
       if (result) {
         setFinalPRD('```markdown\n' + result + '\n```');
 
         // AI에게 PRD 요약 생성 요청
+        setProgress(75);
         const summaryPrompt = `다음 PRD 문서를 읽고 핵심 섹션별로 간결하게 요약해주세요.
 
 **중요**: 반드시 아래 형식을 정확히 따라주세요. 각 섹션 사이에 빈 줄(\\n\\n)을 넣어주세요.
@@ -2428,12 +2489,15 @@ ${result}
 
 위 형식으로 PRD의 주요 섹션(최소 5개 이상)을 요약해주세요.`;
 
+        setProgress(80);
         const summaryResult = await callGeminiAPI(summaryPrompt);
+        setProgress(95);
         if (summaryResult) {
           setPrdSummary(summaryResult);
         }
       }
 
+      setProgress(100);
       setIsProcessing(false);
     } else {
       setTimeout(() => {
@@ -3440,8 +3504,8 @@ ${finalPRD}
                 {isProcessing ? (
                   <div className="flex items-center justify-center flex-1">
                     <div className="text-center">
-                      <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4" />
-                      <p className="text-gray-900 font-medium mb-1">이터레이션 계획 생성 중</p>
+                      <CircularProgress percentage={progress} />
+                      <p className="text-gray-900 font-medium mb-1 mt-4">이터레이션 계획 생성 중</p>
                       <p className="text-gray-600 text-sm">사용자 답변을 분석하고 있습니다</p>
                     </div>
                   </div>
@@ -3610,8 +3674,8 @@ ${finalPRD}
                 {isProcessing ? (
                   <div className="flex items-center justify-center flex-1">
                     <div className="text-center">
-                      <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4" />
-                      <p className="text-gray-900 font-medium mb-1">사용자 스토리 생성 중</p>
+                      <CircularProgress percentage={progress} />
+                      <p className="text-gray-900 font-medium mb-1 mt-4">사용자 스토리 생성 중</p>
                       <p className="text-gray-600 text-sm">페르소나 분석 및 맞춤형 스토리 작성 중</p>
                     </div>
                   </div>
@@ -3776,8 +3840,8 @@ ${finalPRD}
                 {isProcessing ? (
                   <div className="flex items-center justify-center flex-1">
                     <div className="text-center">
-                      <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4" />
-                      <p className="text-gray-900 font-medium mb-1">최종 PRD 생성 중</p>
+                      <CircularProgress percentage={progress} />
+                      <p className="text-gray-900 font-medium mb-1 mt-4">최종 PRD 생성 중</p>
                       <p className="text-gray-600 text-sm">모든 정보를 통합하고 보완하여 완성도 높은 PRD 작성 중</p>
                     </div>
                   </div>
