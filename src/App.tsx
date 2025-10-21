@@ -31,9 +31,7 @@ export default function PRDPromptGenerator() {
   const [finalPRD, setFinalPRD] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(false);
-  const [useRealAI, setUseRealAI] = useState<boolean>(false);
+  const useRealAI = true; // 프록시 API 사용으로 항상 활성화
   const [modificationRequest, setModificationRequest] = useState<string>('');
   const [modificationHistory, setModificationHistory] = useState<ChatMessage[]>([]);
   const [detailedChatMessages, setDetailedChatMessages] = useState<ChatMessage[]>([]);
@@ -220,108 +218,42 @@ export default function PRDPromptGenerator() {
     );
   };
 
-  // API 테스트 함수
-  const testGeminiAPI = async () => {
-    console.log('=== API 테스트 시작 ===');
-    console.log('API 키:', geminiApiKey ? geminiApiKey.substring(0, 10) + '...' : '없음');
-    
-    if (!geminiApiKey.trim()) {
-      alert('API 키를 입력해주세요.');
-      return;
-    }
-    
-    setIsProcessing(true);
-    
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
-      console.log('요청 URL:', url);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Test' }] }]
-        })
-      });
-      
-      console.log('응답 상태:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('응답 성공:', data);
-        setUseRealAI(true);
-        setShowApiKeyInput(false);
-        alert('✅ Gemini API 연결 성공!\n실제 AI가 활성화되었습니다.');
-      } else {
-        const errorData = await response.json();
-        console.error('API 오류:', errorData);
-        alert('❌ API 키가 유효하지 않습니다.\n\n오류: ' + (errorData.error?.message || '알 수 없는 오류'));
-      }
-    } catch (error) {
-      console.error('연결 오류:', error);
-      alert('❌ API 연결 실패\n\n' + (error instanceof Error ? error.message : '알 수 없는 오류'));
-    } finally {
-      setIsProcessing(false);
-      console.log('=== API 테스트 종료 ===');
-    }
-  };
 
-  // Gemini API 호출 함수 (스트리밍 지원)
+  // Gemini API 호출 함수 (프록시 사용)
   const callGeminiAPI = async (
     prompt: string,
     onProgress?: (progress: number) => void
   ): Promise<string | null> => {
-    if (!geminiApiKey) {
-      alert('Gemini API 키를 먼저 설정해주세요.');
-      return null;
-    }
-
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: prompt
-              }]
-            }],
-            generationConfig: {
-              temperature: 0.3,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 32000,
-              candidateCount: 1,
-            }
-          })
-        }
-      );
+      // Vercel Serverless Function 호출
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt })
+      });
 
       if (!response.ok) {
-        throw new Error(`API 오류: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API 오류: ${response.status}`);
       }
 
       const data = await response.json();
       console.log('📦 API 응답:', data);
 
-      // 텍스트 추출
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const { text, usageMetadata } = data;
 
       if (!text) {
-        console.error('❌ 텍스트 추출 실패. 응답 구조:', data);
         throw new Error('API 응답에서 텍스트를 추출할 수 없습니다.');
       }
 
       // 토큰 사용량 정보 추출
-      if (data?.usageMetadata) {
+      if (usageMetadata) {
         const tokenInfo = {
-          prompt: data.usageMetadata.promptTokenCount || 0,
-          completion: data.usageMetadata.candidatesTokenCount || 0,
-          total: data.usageMetadata.totalTokenCount || 0,
+          prompt: usageMetadata.promptTokenCount || 0,
+          completion: usageMetadata.candidatesTokenCount || 0,
+          total: usageMetadata.totalTokenCount || 0,
         };
         setCumulativeTokens(prev => prev + tokenInfo.total);
         console.log('📊 이번 호출 토큰:', tokenInfo);
@@ -441,7 +373,7 @@ export default function PRDPromptGenerator() {
     }
     setCurrentStep(1);
 
-    if (useRealAI && geminiApiKey) {
+    if (useRealAI) {
       setIsProcessing(true);
       const prompt = `[중요] 출력 형식을 절대 변경하지 마세요. 아래 형식만 사용하세요:
 
@@ -527,7 +459,7 @@ export default function PRDPromptGenerator() {
     const userAnswers = newMessages.filter(m => m.type === 'user').length;
 
     if (userAnswers < REQUIRED_ANSWERS) {
-      if (useRealAI && geminiApiKey) {
+      if (useRealAI) {
         setIsProcessing(true);
         
         const conversationHistory = newMessages
@@ -683,7 +615,7 @@ ${conversationHistory}
     setCurrentStep(2);
 
     // 기본 정보 요약 생성
-    if (useRealAI && geminiApiKey) {
+    if (useRealAI) {
       // 질문과 답변을 페어로 추출
       const qaList = chatMessages
         .filter(m => m.type === 'ai' && m.questionIndex !== undefined)
@@ -715,7 +647,7 @@ ${qaList}
     }
 
     // Step 2의 첫 번째 질문 생성
-    if (useRealAI && geminiApiKey) {
+    if (useRealAI) {
       const basicInfoQA = chatMessages
         .filter(m => m.type === 'ai' && m.questionIndex !== undefined)
         .map((aiMsg) => {
@@ -823,7 +755,7 @@ ${basicInfoQA}
     const userAnswers = newMessages.filter(m => m.type === 'user').length;
 
     if (userAnswers < REQUIRED_ANSWERS) {
-      if (useRealAI && geminiApiKey) {
+      if (useRealAI) {
         setIsProcessing(true);
 
         const basicInfoQA = chatMessages
@@ -1219,7 +1151,7 @@ ${interaction}
     setProgress(10);
     console.log('🤖 이터레이션 계획 생성 시작...');
 
-    if (useRealAI && geminiApiKey) {
+    if (useRealAI) {
       setProgress(15);
       const basicInfoAnswers = chatMessages
         .filter(m => m.type === 'user')
@@ -1476,7 +1408,7 @@ ${result}`;
     setModificationRequest('');
     console.log('🤖 사용자 스토리 생성 시작...');
 
-    if (useRealAI && geminiApiKey) {
+    if (useRealAI) {
       setProgress(10);
       const basicInfoAnswers = chatMessages
         .filter(m => m.type === 'user')
@@ -1692,7 +1624,7 @@ ${iterationPlan}
     setModificationRequest('');
     console.log('🤖 최종 PRD 생성 시작...');
 
-    if (useRealAI && geminiApiKey) {
+    if (useRealAI) {
       setProgress(5);
       const basicInfoAnswers = chatMessages
         .filter(m => m.type === 'user')
@@ -2942,7 +2874,7 @@ MVP 핵심 기능부터 시작하여 3단계로 점진적 개발을 진행하며
     setModificationRequest('');
     setIsProcessing(true);
 
-    if (useRealAI && geminiApiKey) {
+    if (useRealAI) {
       const prompt = `다음은 현재 이터레이션 계획입니다:
 
 ${iterationPlan}
@@ -2976,7 +2908,7 @@ ${iterationPlan}
     setModificationRequest('');
     setIsProcessing(true);
 
-    if (useRealAI && geminiApiKey) {
+    if (useRealAI) {
       const prompt = `다음은 현재 사용자 스토리입니다:
 
 ${userStories}
@@ -3010,7 +2942,7 @@ ${userStories}
     setModificationRequest('');
     setIsProcessing(true);
 
-    if (useRealAI && geminiApiKey) {
+    if (useRealAI) {
       const prompt = `다음은 현재 PRD입니다:
 
 ${finalPRD}
@@ -3093,16 +3025,9 @@ ${finalPRD}
                   </button>
                 </div>
               )}
-              <button
-                onClick={() => setShowApiKeyInput(!showApiKeyInput)}
-                className={`font-medium py-2.5 px-5 rounded-lg transition-colors text-sm border ${
-                  useRealAI
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
-                    : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300'
-                }`}
-              >
-                {useRealAI ? 'AI 연결됨' : 'AI 설정'}
-              </button>
+              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <span className="text-sm font-medium text-blue-900">✅ AI 활성화</span>
+              </div>
             </div>
           </div>
           
@@ -4115,86 +4040,6 @@ ${finalPRD}
           </div>
         </div>
       </div>
-
-      {/* API Key Modal */}
-      {showApiKeyInput && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowApiKeyInput(false)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Gemini API 설정</h3>
-              <button
-                onClick={() => setShowApiKeyInput(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {useRealAI && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  <strong>✓ AI가 활성화되었습니다.</strong> 실제 AI가 맥락을 이해하고 최적의 질문을 생성합니다.
-                </p>
-              </div>
-            )}
-
-            <p className="text-sm text-gray-600 mb-4">
-              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                Google AI Studio
-              </a>에서 무료로 API 키를 발급받으세요.
-            </p>
-
-            <div className="space-y-3">
-              <div>
-                <input
-                  type="password"
-                  value={geminiApiKey}
-                  onChange={(e) => setGeminiApiKey(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && testGeminiAPI()}
-                  placeholder="API 키 입력"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
-                />
-                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded flex items-center justify-between gap-2">
-                  <p className="text-xs text-amber-800 flex-1">
-                    <strong>테스트용 임시 키:</strong> <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900">AIzaSyCUtCsVDz82_9pSEsJbtOFOlNfD_rHkMrM</code>
-                  </p>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText('AIzaSyCUtCsVDz82_9pSEsJbtOFOlNfD_rHkMrM');
-                      const btn = document.activeElement as HTMLButtonElement;
-                      const originalText = btn.textContent;
-                      btn.textContent = '복사됨!';
-                      setTimeout(() => {
-                        btn.textContent = originalText;
-                      }, 1500);
-                    }}
-                    className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded transition-colors whitespace-nowrap"
-                  >
-                    복사
-                  </button>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowApiKeyInput(false)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={testGeminiAPI}
-                  disabled={isProcessing || !geminiApiKey.trim()}
-                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm disabled:opacity-50"
-                >
-                  {isProcessing ? '연결 중...' : '연결'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
