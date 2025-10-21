@@ -20,7 +20,8 @@
       "Bash(git remote add:*)",
       "Bash(git branch:*)",
       "Bash(git push:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nFix: 사용하지 않는 변수 제거\n\n- mockBasicInfoSummary 변수 및 useMemo 제거\n- Vercel 배포 시 TypeScript 에러 해결\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix: 사용하지 않는 변수 제거\n\n- mockBasicInfoSummary 변수 및 useMemo 제거\n- Vercel 배포 시 TypeScript 에러 해결\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
