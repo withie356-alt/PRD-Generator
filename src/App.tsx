@@ -1159,16 +1159,18 @@ ${interaction}
   const generateIterationPlan = async () => {
     setIsProcessing(true);
     setProgress(0);
+    setIterationPlan(''); // 이전 데이터 초기화
+    setIterationSummary(''); // 이전 요약 초기화
+    setCurrentStep(3); // Step 3으로 먼저 전환
+    setModificationHistory([]); // 수정 기록 초기화
+    setModificationRequest('');
 
-    // Step 2 → Step 3 전환 시 AI 디자인 보정
-    console.log('🎨 Step 2 완료 - AI 디자인 보정 시작...');
+    // Step 3 화면에서 AI 디자인 보정 수행
+    console.log('🎨 AI 디자인 보정 시작...');
     setProgress(5);
     await enrichDesignWithAI();
 
     setProgress(10);
-    setCurrentStep(3); // Step 3으로 전환
-    setModificationHistory([]); // 수정 기록 초기화
-    setModificationRequest('');
     console.log('🤖 이터레이션 계획 생성 시작...');
 
     if (useRealAI && geminiApiKey) {
@@ -1412,6 +1414,7 @@ ${result}`;
   const generateUserStories = async () => {
     setIsProcessing(true);
     setProgress(0);
+    setUserStories(''); // 이전 데이터 초기화
     setCurrentStep(4); // 즉시 Step 4로 전환
     setModificationHistory([]); // 수정 기록 초기화
     setModificationRequest('');
@@ -1621,6 +1624,8 @@ ${iterationPlan}
   const generateFinalPRD = async () => {
     setIsProcessing(true);
     setProgress(0);
+    setFinalPRD(''); // 이전 데이터 초기화
+    setPrdSummary(''); // 이전 요약 초기화
     setCurrentStep(5); // 즉시 Step 5로 전환
     setModificationHistory([]); // 수정 기록 초기화
     setModificationRequest('');
