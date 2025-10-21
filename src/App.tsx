@@ -236,7 +236,8 @@ export default function PRDPromptGenerator() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `API 오류: ${response.status}`);
+        console.error('❌ API 에러 응답:', errorData);
+        throw new Error(JSON.stringify(errorData) || `API 오류: ${response.status}`);
       }
 
       const data = await response.json();
