@@ -198,6 +198,22 @@ export default function PRDPromptGenerator() {
     );
   };
 
+  // 진행률을 점진적으로 증가시키는 헬퍼 함수
+  const simulateProgress = (start: number, end: number, duration: number) => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(start + ((end - start) * elapsed) / duration, end);
+      setProgress(Math.floor(progress));
+
+      if (elapsed >= duration) {
+        clearInterval(interval);
+      }
+    }, 100); // 100ms마다 업데이트
+
+    return interval;
+  };
+
   // API 테스트 함수
   const testGeminiAPI = async () => {
     console.log('=== API 테스트 시작 ===');
@@ -1286,15 +1302,18 @@ ${enrichedDesignSystem ? `\n구체화된 디자인 시스템 (AI 보정):\n${enr
 
 각 이터레이션은 독립적으로 배포 가능하고 사용자에게 가치를 전달할 수 있어야 합니다.`;
 
-      setProgress(30);
+      setProgress(20);
+      // AI 호출 중 진행률 시뮬레이션 (20% → 60%, 예상 20초)
+      const progressInterval = simulateProgress(20, 60, 20000);
       const result = await callGeminiAPI(prompt);
+      clearInterval(progressInterval);
 
-      setProgress(70);
+      setProgress(65);
       if (result) {
         setIterationPlan(result);
 
         // AI에게 요약 생성 요청
-        setProgress(75);
+        setProgress(70);
         const summaryPrompt = `다음 이터레이션 계획을 3개 이터레이션별로 각각 2-3문장으로 간결하게 요약해주세요.
 
 **중요**: 반드시 아래 형식을 정확히 따라주세요. 각 이터레이션 사이에 빈 줄(\\n\\n)을 넣어주세요.
@@ -1315,8 +1334,11 @@ ${enrichedDesignSystem ? `\n구체화된 디자인 시스템 (AI 보정):\n${enr
 이터레이션 계획:
 ${result}`;
 
-        setProgress(80);
+        setProgress(75);
+        // 요약 생성 중 진행률 시뮬레이션 (75% → 90%, 예상 10초)
+        const summaryInterval = simulateProgress(75, 90, 10000);
         const summaryResult = await callGeminiAPI(summaryPrompt);
+        clearInterval(summaryInterval);
         setProgress(95);
         if (summaryResult) {
           setIterationSummary(summaryResult);
@@ -1502,8 +1524,11 @@ ${iterationPlan}
 각 스토리는 이터레이션 1의 MVP 범위에 포함되며, 독립적으로 개발/배포 가능해야 합니다.
 모든 스토리는 실제 사용자 가치를 제공하고 테스트 가능한 인수 기준을 포함해야 합니다.`;
 
-      setProgress(30);
+      setProgress(20);
+      // AI 호출 중 진행률 시뮬레이션 (20% → 90%, 예상 15초)
+      const progressInterval = simulateProgress(20, 90, 15000);
       const result = await callGeminiAPI(prompt);
+      clearInterval(progressInterval);
       setProgress(100);
       setIsProcessing(false);
 
@@ -2457,15 +2482,18 @@ const fetch[DataName] = async () => {
 
 이 PRD는 실제 개발에 즉시 활용 가능한 수준으로 작성되었습니다.`;
 
-      setProgress(20);
+      setProgress(15);
+      // AI 호출 중 진행률 시뮬레이션 (15% → 60%, 예상 30초)
+      const progressInterval = simulateProgress(15, 60, 30000);
       const result = await callGeminiAPI(prompt);
+      clearInterval(progressInterval);
 
-      setProgress(70);
+      setProgress(65);
       if (result) {
         setFinalPRD('```markdown\n' + result + '\n```');
 
         // AI에게 PRD 요약 생성 요청
-        setProgress(75);
+        setProgress(70);
         const summaryPrompt = `다음 PRD 문서를 읽고 핵심 섹션별로 간결하게 요약해주세요.
 
 **중요**: 반드시 아래 형식을 정확히 따라주세요. 각 섹션 사이에 빈 줄(\\n\\n)을 넣어주세요.
@@ -2494,8 +2522,11 @@ ${result}
 
 위 형식으로 PRD의 주요 섹션(최소 5개 이상)을 요약해주세요.`;
 
-        setProgress(80);
+        setProgress(75);
+        // 요약 생성 중 진행률 시뮬레이션 (75% → 90%, 예상 10초)
+        const summaryInterval = simulateProgress(75, 90, 10000);
         const summaryResult = await callGeminiAPI(summaryPrompt);
+        clearInterval(summaryInterval);
         setProgress(95);
         if (summaryResult) {
           setPrdSummary(summaryResult);
