@@ -43,6 +43,7 @@ export default function PRDPromptGenerator() {
   const [iterationSummary, setIterationSummary] = useState<string>('');
   const [prdSummary, setPrdSummary] = useState<string>('');
   const [progress, setProgress] = useState<number>(0); // 진행률 (0-100)
+  const [tokenUsage, setTokenUsage] = useState<{ prompt: number; completion: number; total: number } | null>(null); // 토큰 사용량
 
   // 채팅 스크롤 자동화를 위한 ref
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -291,47 +292,70 @@ export default function PRDPromptGenerator() {
       const decoder = new TextDecoder();
       let fullText = '';
       let buffer = '';
+      let lastTokenInfo = null;
 
-      while (true) {
-        const { done, value } = await reader.read();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
 
-        if (done) break;
+          if (done) break;
 
-        // 받은 chunk를 문자열로 변환
-        buffer += decoder.decode(value, { stream: true });
+          // 받은 chunk를 문자열로 변환
+          buffer += decoder.decode(value, { stream: true });
 
-        // JSON 라인 파싱 (Gemini는 줄바꿈으로 구분된 JSON 반환)
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // 마지막 불완전한 줄은 버퍼에 보관
+          // JSON 라인 파싱 (Gemini는 줄바꿈으로 구분된 JSON 반환)
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // 마지막 불완전한 줄은 버퍼에 보관
 
-        for (const line of lines) {
-          if (line.trim() === '') continue;
+          for (const line of lines) {
+            if (line.trim() === '') continue;
 
-          try {
-            const parsed = JSON.parse(line);
-            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+            try {
+              const parsed = JSON.parse(line);
+              const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-            if (text) {
-              fullText += text;
+              if (text) {
+                fullText += text;
 
-              // 진행률 콜백 (받은 텍스트 길이 기반으로 예측)
-              // 평균적으로 3000자 정도 생성된다고 가정
-              if (onProgress) {
-                const estimatedProgress = Math.min((fullText.length / 3000) * 100, 95);
-                onProgress(estimatedProgress);
+                // 진행률 콜백 (받은 텍스트 길이 기반으로 예측)
+                // 평균적으로 3000자 정도 생성된다고 가정
+                if (onProgress) {
+                  const estimatedProgress = Math.min((fullText.length / 3000) * 100, 95);
+                  onProgress(estimatedProgress);
+                }
               }
+
+              // 토큰 사용량 정보 추출 (마지막 chunk에 포함됨)
+              if (parsed?.usageMetadata) {
+                lastTokenInfo = {
+                  prompt: parsed.usageMetadata.promptTokenCount || 0,
+                  completion: parsed.usageMetadata.candidatesTokenCount || 0,
+                  total: parsed.usageMetadata.totalTokenCount || 0,
+                };
+              }
+            } catch (e) {
+              // JSON 파싱 에러는 무시 (불완전한 chunk일 수 있음)
             }
-          } catch (e) {
-            // JSON 파싱 에러는 무시 (불완전한 chunk일 수 있음)
           }
         }
+      } catch (streamError) {
+        // 스트리밍 중 에러 발생 시 로그 출력하고 계속 진행
+        console.warn('⚠️ 스트리밍 중단됨:', streamError);
+        console.log('📝 받은 텍스트 길이:', fullText.length);
       }
 
-      if (!fullText) {
-        throw new Error('API 응답에서 텍스트를 추출할 수 없습니다.');
+      // 토큰 사용량 업데이트
+      if (lastTokenInfo) {
+        setTokenUsage(lastTokenInfo);
+        console.log('📊 토큰 사용량:', lastTokenInfo);
       }
 
-      return fullText;
+      // 받은 텍스트가 있으면 반환 (중단되어도 일부 받았다면 사용)
+      if (fullText) {
+        return fullText;
+      }
+
+      throw new Error('API 응답에서 텍스트를 추출할 수 없습니다.');
     } catch (error) {
       console.error('Gemini API 호출 실패:', error);
       alert(`API 호출에 실패했습니다. ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
@@ -3581,6 +3605,12 @@ ${finalPRD}
                       <CircularProgress percentage={progress} />
                       <p className="text-gray-900 font-medium mb-1 mt-4">이터레이션 계획 생성 중</p>
                       <p className="text-gray-600 text-sm">사용자 답변을 분석하고 있습니다</p>
+                      {tokenUsage && (
+                        <div className="mt-4 text-xs text-gray-500">
+                          <p>📊 토큰 사용량: {tokenUsage.total.toLocaleString()}</p>
+                          <p className="text-gray-400">(입력: {tokenUsage.prompt.toLocaleString()} / 출력: {tokenUsage.completion.toLocaleString()})</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -3751,6 +3781,12 @@ ${finalPRD}
                       <CircularProgress percentage={progress} />
                       <p className="text-gray-900 font-medium mb-1 mt-4">사용자 스토리 생성 중</p>
                       <p className="text-gray-600 text-sm">페르소나 분석 및 맞춤형 스토리 작성 중</p>
+                      {tokenUsage && (
+                        <div className="mt-4 text-xs text-gray-500">
+                          <p>📊 토큰 사용량: {tokenUsage.total.toLocaleString()}</p>
+                          <p className="text-gray-400">(입력: {tokenUsage.prompt.toLocaleString()} / 출력: {tokenUsage.completion.toLocaleString()})</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -3917,6 +3953,12 @@ ${finalPRD}
                       <CircularProgress percentage={progress} />
                       <p className="text-gray-900 font-medium mb-1 mt-4">최종 PRD 생성 중</p>
                       <p className="text-gray-600 text-sm">모든 정보를 통합하고 보완하여 완성도 높은 PRD 작성 중</p>
+                      {tokenUsage && (
+                        <div className="mt-4 text-xs text-gray-500">
+                          <p>📊 토큰 사용량: {tokenUsage.total.toLocaleString()}</p>
+                          <p className="text-gray-400">(입력: {tokenUsage.prompt.toLocaleString()} / 출력: {tokenUsage.completion.toLocaleString()})</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
