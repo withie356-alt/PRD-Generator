@@ -46,12 +46,24 @@ export default function PRDPromptGenerator() {
   const [cumulativeTokens, setCumulativeTokens] = useState<number>(() => {
     // localStorage에서 초기값 로드
     const saved = localStorage.getItem('prd-cumulative-tokens');
+    const savedDate = localStorage.getItem('prd-token-date');
+    const today = new Date().toDateString();
+
+    // 날짜가 바뀌었으면 0으로 리셋
+    if (savedDate !== today) {
+      localStorage.setItem('prd-token-date', today);
+      localStorage.removeItem('prd-cumulative-tokens');
+      return 0;
+    }
+
     return saved ? parseInt(saved, 10) : 0;
   }); // 누적 토큰 사용량
 
   // 누적 토큰이 변경될 때마다 localStorage에 저장
   useEffect(() => {
+    const today = new Date().toDateString();
     localStorage.setItem('prd-cumulative-tokens', cumulativeTokens.toString());
+    localStorage.setItem('prd-token-date', today);
   }, [cumulativeTokens]);
 
   // 채팅 스크롤 자동화를 위한 ref
