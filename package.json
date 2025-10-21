@@ -1,0 +1,29 @@
+{
+  "name": "prd-prompt-generator",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "대화형 PRD 생성기",
+  "private": true,
+  "scripts": {
+    "predev": "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :5173') do taskkill /F /PID %a 2>nul || exit 0",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.460.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15"
+  }
+}

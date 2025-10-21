@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run dev)",
+      "Read(//c/Users/이성규/OneDrive - 위드인천에너지(주)/성규/제안/PRD생성기/로고/**)",
+      "WebSearch",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill /F /PID 18548)",
+      "Bash(taskkill //F //PID 18548)",
+      "Bash(taskkill //F //PID 2252)",
+      "Bash(if exist node_modules.vite rmdir /s /q node_modules.vite)",
+      "Bash(if exist .vite rmdir /s /q .vite)",
+      "Bash(taskkill:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: 대화형 PRD 생성기\n\n- React + TypeScript + Vite 기반 프로젝트 설정\n- Tailwind CSS를 활용한 스타일링\n- 단계별 질문 시스템 구현\n- PRD 미리보기 및 다운로드 기능\n- .gitignore 및 README.md 추가\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
