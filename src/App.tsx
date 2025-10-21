@@ -219,11 +219,14 @@ export default function PRDPromptGenerator() {
   };
 
 
-  // Gemini API 호출 함수 (프록시 사용)
+  // Gemini API 호출 함수 (프록시 사용, 자동 재시도 3회)
   const callGeminiAPI = async (
     prompt: string,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    retryCount: number = 0
   ): Promise<string | null> => {
+    const MAX_RETRIES = 3;
+
     try {
       // Vercel Serverless Function 호출
       const response = await fetch('/api/gemini', {
@@ -268,8 +271,18 @@ export default function PRDPromptGenerator() {
 
       return text;
     } catch (error) {
-      console.error('Gemini API 호출 실패:', error);
-      alert(`API 호출에 실패했습니다. ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      console.error(`Gemini API 호출 실패 (시도 ${retryCount + 1}/${MAX_RETRIES}):`, error);
+
+      // 재시도 로직
+      if (retryCount < MAX_RETRIES - 1) {
+        const waitTime = 1000 * (retryCount + 1); // 1초, 2초, 3초 대기
+        console.log(`🔄 ${waitTime / 1000}초 후 재시도합니다...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        return callGeminiAPI(prompt, onProgress, retryCount + 1);
+      }
+
+      // 최종 실패
+      alert(`API 호출에 실패했습니다 (${MAX_RETRIES}번 시도). ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
       return null;
     }
   };
