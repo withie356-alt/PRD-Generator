@@ -1117,7 +1117,12 @@ ${interaction}
   // Step 3: 이터레이션 계획 생성
   const generateIterationPlan = async () => {
     setIsProcessing(true);
-    setCurrentStep(3); // 즉시 Step 3으로 전환
+
+    // Step 2 → Step 3 전환 시 AI 디자인 보정
+    console.log('🎨 Step 2 완료 - AI 디자인 보정 시작...');
+    await enrichDesignWithAI();
+
+    setCurrentStep(3); // Step 3으로 전환
     setModificationHistory([]); // 수정 기록 초기화
     setModificationRequest('');
     console.log('🤖 이터레이션 계획 생성 시작...');
@@ -1151,6 +1156,8 @@ ${basicInfoAnswers}
 
 화면 구성 상세 정보 (Step 2 - UX/UI 설계):
 ${detailedInfoAnswers}
+
+${enrichedDesignSystem ? `\n구체화된 디자인 시스템 (AI 보정):\n${enrichedDesignSystem}\n` : ''}
 
 다음 형식으로 Agile 방법론에 따라 작성해주세요:
 
@@ -1388,6 +1395,8 @@ ${basicInfoAnswers}
 화면 구성 상세 정보 (Step 2 - UX/UI 설계):
 ${detailedInfoAnswers}
 
+${enrichedDesignSystem ? `\n구체화된 디자인 시스템 (AI 보정):\n${enrichedDesignSystem}\n` : ''}
+
 이터레이션 계획:
 ${iterationPlan}
 
@@ -1607,24 +1616,20 @@ ${basicInfoAnswers}
 
 ---
 
-화면 구성 상세 정보 (Step 2 - Visual Design & UX/UI 설계 14가지 질문):
+화면 구성 상세 정보 (Step 2 - Visual Design & UX/UI 설계 6가지 질문):
 ${detailedInfoAnswers}
 
-**중요**: Step 2의 답변에는 다음 14가지 디자인 명세가 포함되어 있습니다:
-1. [Design System & Brand Identity] - 전체적인 디자인 느낌과 브랜드 정체성
-2. [Color System] - 브랜드 컬러와 기능별 색상 역할
-3. [Typography & Hierarchy] - 텍스트 스타일과 시각적 위계
-4. [Layout & Spacing] - 레이아웃과 여백 시스템
-5. [Icons & Visual Elements] - 아이콘 스타일과 시각적 요소
-6. [Button & CTA Design] - 버튼과 주요 액션 요소
-7. [Cards & Components] - 카드와 주요 컴포넌트 스타일
-8. [Animation & Interaction] - 애니메이션과 인터랙션
-9. [User Journey] - 사용자 핵심 단계
-10. [Information Architecture] - 화면 정보 구조
-11. [Wireflow] - 화면 연결 흐름
-12. [Data Input] - 입력 필드 명세
-13. [Data Display] - 데이터 표시 방식
-14. [Mobile-First & Responsive] - 모바일/데스크톱 차이
+---
+
+${enrichedDesignSystem ? `구체화된 디자인 시스템 (AI 보정 - 개발자가 바로 구현 가능한 명세):\n${enrichedDesignSystem}\n\n---\n` : ''}
+
+**중요**: Step 2의 답변은 다음 6가지 디자인 핵심 요소를 포함하며, AI가 이를 구체적인 디자인 명세로 변환했습니다:
+1. [Reference App] - 참고할 앱/웹사이트
+2. [Main Color] - 메인 컬러
+3. [Typography Style] - 타이포그래피 스타일
+4. [Main Screens] - 핵심 화면 3개
+5. [Navigation Pattern] - 네비게이션 방식
+6. [Key Interactions] - 주요 인터랙션
 
 ---
 
