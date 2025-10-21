@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Copy, FileText, Zap, CheckCircle, MessageSquare, ArrowRight, ArrowLeft, Lightbulb, Loader2 } from 'lucide-react';
 
 // 타입 정의
@@ -146,63 +146,6 @@ export default function PRDPromptGenerator() {
       }, 100);
     }
   }, [currentStep, isProcessing, userStories]);
-
-  // 목업 모드 요약 계산 (메모이제이션) - Step 1에서만 사용
-  const mockBasicInfoSummary = useMemo(() => {
-    // Step 2 이상이거나 AI 모드인 경우 계산하지 않음
-    if (useRealAI || currentStep >= 2) return null;
-
-    const answers = chatMessages
-      .filter(m => m.type === 'ai' && m.questionIndex !== undefined)
-      .map((aiMsg) => {
-        const userAnswer = chatMessages.find(
-          (m, i) => m.type === 'user' && i > chatMessages.indexOf(aiMsg)
-        );
-        return userAnswer ? { question: aiMsg.content, answer: userAnswer.content } : null;
-      })
-      .filter(Boolean);
-
-    if (answers.length === 0) return '답변을 기다리고 있습니다...';
-
-    const parts: string[] = [];
-
-    answers.forEach((item) => {
-      if (!item) return;
-      const { question, answer } = item;
-
-      if (question.includes('주요 사용자')) {
-        parts.push(`주요 사용자는 ${answer}이며`);
-      } else if (question.includes('핵심 기능')) {
-        parts.push(`핵심 기능으로 ${answer}가 필요하고`);
-      } else if (question.includes('입력') || question.includes('업로드')) {
-        parts.push(`${answer}를 입력 데이터로 활용하며`);
-      } else if (question.includes('결과물')) {
-        parts.push(`${answer} 형태로 결과를 제공하고`);
-      } else if (question.includes('디자인')) {
-        parts.push(`디자인은 ${answer} 스타일을 선호하며`);
-      } else if (question.includes('로그인') || question.includes('회원')) {
-        parts.push(`회원 관리는 ${answer}로 구성`);
-      }
-    });
-
-    if (parts.length > 0) {
-      const lastPart = parts[parts.length - 1];
-      parts[parts.length - 1] = lastPart
-        .replace(/이며$/, '입니다')
-        .replace(/하고$/, '합니다')
-        .replace(/며$/, '습니다')
-        .replace(/구성$/, '구성됩니다')
-        .replace(/활용하며$/, '활용합니다')
-        .replace(/제공하고$/, '제공합니다')
-        .replace(/선호하며$/, '선호합니다');
-
-      if (!parts[parts.length - 1].match(/니다$|습니다$/)) {
-        parts[parts.length - 1] = parts[parts.length - 1] + '입니다';
-      }
-    }
-
-    return parts.join(', ') + '.';
-  }, [chatMessages, useRealAI, currentStep]);
 
   const steps = [
     { id: 0, name: '문제 설명', icon: FileText },
