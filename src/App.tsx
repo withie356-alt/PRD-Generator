@@ -198,22 +198,6 @@ export default function PRDPromptGenerator() {
     );
   };
 
-  // 진행률을 점진적으로 증가시키는 헬퍼 함수
-  const simulateProgress = (start: number, end: number, duration: number) => {
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(start + ((end - start) * elapsed) / duration, end);
-      setProgress(Math.floor(progress));
-
-      if (elapsed >= duration) {
-        clearInterval(interval);
-      }
-    }, 100); // 100ms마다 업데이트
-
-    return interval;
-  };
-
   // API 테스트 함수
   const testGeminiAPI = async () => {
     console.log('=== API 테스트 시작 ===');
@@ -260,8 +244,11 @@ export default function PRDPromptGenerator() {
     }
   };
 
-  // Gemini API 호출 함수
-  const callGeminiAPI = async (prompt: string): Promise<string | null> => {
+  // Gemini API 호출 함수 (스트리밍 지원)
+  const callGeminiAPI = async (
+    prompt: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string | null> => {
     if (!geminiApiKey) {
       alert('Gemini API 키를 먼저 설정해주세요.');
       return null;
@@ -269,7 +256,7 @@ export default function PRDPromptGenerator() {
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: {
@@ -296,14 +283,55 @@ export default function PRDPromptGenerator() {
         throw new Error(`API 오류: ${response.status}`);
       }
 
-      const data = await response.json();
-
-      // Null 체크 추가
-      if (!data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-        throw new Error('API 응답 형식이 올바르지 않습니다.');
+      if (!response.body) {
+        throw new Error('응답 body가 없습니다.');
       }
 
-      return data.candidates[0].content.parts[0].text;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        // 받은 chunk를 문자열로 변환
+        buffer += decoder.decode(value, { stream: true });
+
+        // JSON 라인 파싱 (Gemini는 줄바꿈으로 구분된 JSON 반환)
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // 마지막 불완전한 줄은 버퍼에 보관
+
+        for (const line of lines) {
+          if (line.trim() === '') continue;
+
+          try {
+            const parsed = JSON.parse(line);
+            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (text) {
+              fullText += text;
+
+              // 진행률 콜백 (받은 텍스트 길이 기반으로 예측)
+              // 평균적으로 3000자 정도 생성된다고 가정
+              if (onProgress) {
+                const estimatedProgress = Math.min((fullText.length / 3000) * 100, 95);
+                onProgress(estimatedProgress);
+              }
+            }
+          } catch (e) {
+            // JSON 파싱 에러는 무시 (불완전한 chunk일 수 있음)
+          }
+        }
+      }
+
+      if (!fullText) {
+        throw new Error('API 응답에서 텍스트를 추출할 수 없습니다.');
+      }
+
+      return fullText;
     } catch (error) {
       console.error('Gemini API 호출 실패:', error);
       alert(`API 호출에 실패했습니다. ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
@@ -1303,10 +1331,12 @@ ${enrichedDesignSystem ? `\n구체화된 디자인 시스템 (AI 보정):\n${enr
 각 이터레이션은 독립적으로 배포 가능하고 사용자에게 가치를 전달할 수 있어야 합니다.`;
 
       setProgress(20);
-      // AI 호출 중 진행률 시뮬레이션 (20% → 60%, 예상 20초)
-      const progressInterval = simulateProgress(20, 60, 20000);
-      const result = await callGeminiAPI(prompt);
-      clearInterval(progressInterval);
+      // AI 호출 중 실시간 진행률 업데이트 (스트리밍)
+      const result = await callGeminiAPI(prompt, (streamProgress) => {
+        // 20%에서 시작해서 스트리밍 진행률을 20~60% 범위로 매핑
+        const mappedProgress = 20 + (streamProgress * 0.4);
+        setProgress(Math.floor(mappedProgress));
+      });
 
       setProgress(65);
       if (result) {
@@ -1334,11 +1364,13 @@ ${enrichedDesignSystem ? `\n구체화된 디자인 시스템 (AI 보정):\n${enr
 이터레이션 계획:
 ${result}`;
 
-        setProgress(75);
-        // 요약 생성 중 진행률 시뮬레이션 (75% → 90%, 예상 10초)
-        const summaryInterval = simulateProgress(75, 90, 10000);
-        const summaryResult = await callGeminiAPI(summaryPrompt);
-        clearInterval(summaryInterval);
+        setProgress(70);
+        // 요약 생성 중 실시간 진행률 업데이트 (스트리밍)
+        const summaryResult = await callGeminiAPI(summaryPrompt, (streamProgress) => {
+          // 70%에서 시작해서 스트리밍 진행률을 70~90% 범위로 매핑
+          const mappedProgress = 70 + (streamProgress * 0.2);
+          setProgress(Math.floor(mappedProgress));
+        });
         setProgress(95);
         if (summaryResult) {
           setIterationSummary(summaryResult);
@@ -1525,10 +1557,12 @@ ${iterationPlan}
 모든 스토리는 실제 사용자 가치를 제공하고 테스트 가능한 인수 기준을 포함해야 합니다.`;
 
       setProgress(20);
-      // AI 호출 중 진행률 시뮬레이션 (20% → 90%, 예상 15초)
-      const progressInterval = simulateProgress(20, 90, 15000);
-      const result = await callGeminiAPI(prompt);
-      clearInterval(progressInterval);
+      // AI 호출 중 실시간 진행률 업데이트 (스트리밍)
+      const result = await callGeminiAPI(prompt, (streamProgress) => {
+        // 20%에서 시작해서 스트리밍 진행률을 20~90% 범위로 매핑
+        const mappedProgress = 20 + (streamProgress * 0.7);
+        setProgress(Math.floor(mappedProgress));
+      });
       setProgress(100);
       setIsProcessing(false);
 
@@ -2483,10 +2517,12 @@ const fetch[DataName] = async () => {
 이 PRD는 실제 개발에 즉시 활용 가능한 수준으로 작성되었습니다.`;
 
       setProgress(15);
-      // AI 호출 중 진행률 시뮬레이션 (15% → 60%, 예상 30초)
-      const progressInterval = simulateProgress(15, 60, 30000);
-      const result = await callGeminiAPI(prompt);
-      clearInterval(progressInterval);
+      // AI 호출 중 실시간 진행률 업데이트 (스트리밍)
+      const result = await callGeminiAPI(prompt, (streamProgress) => {
+        // 15%에서 시작해서 스트리밍 진행률을 15~60% 범위로 매핑
+        const mappedProgress = 15 + (streamProgress * 0.45);
+        setProgress(Math.floor(mappedProgress));
+      });
 
       setProgress(65);
       if (result) {
@@ -2522,11 +2558,13 @@ ${result}
 
 위 형식으로 PRD의 주요 섹션(최소 5개 이상)을 요약해주세요.`;
 
-        setProgress(75);
-        // 요약 생성 중 진행률 시뮬레이션 (75% → 90%, 예상 10초)
-        const summaryInterval = simulateProgress(75, 90, 10000);
-        const summaryResult = await callGeminiAPI(summaryPrompt);
-        clearInterval(summaryInterval);
+        setProgress(70);
+        // 요약 생성 중 실시간 진행률 업데이트 (스트리밍)
+        const summaryResult = await callGeminiAPI(summaryPrompt, (streamProgress) => {
+          // 70%에서 시작해서 스트리밍 진행률을 70~90% 범위로 매핑
+          const mappedProgress = 70 + (streamProgress * 0.2);
+          setProgress(Math.floor(mappedProgress));
+        });
         setProgress(95);
         if (summaryResult) {
           setPrdSummary(summaryResult);
