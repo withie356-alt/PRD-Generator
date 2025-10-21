@@ -257,7 +257,7 @@ export default function PRDPromptGenerator() {
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: {
@@ -284,79 +284,35 @@ export default function PRDPromptGenerator() {
         throw new Error(`API 오류: ${response.status}`);
       }
 
-      if (!response.body) {
-        throw new Error('응답 body가 없습니다.');
+      const data = await response.json();
+      console.log('📦 API 응답:', data);
+
+      // 텍스트 추출
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!text) {
+        console.error('❌ 텍스트 추출 실패. 응답 구조:', data);
+        throw new Error('API 응답에서 텍스트를 추출할 수 없습니다.');
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullText = '';
-      let buffer = '';
-      let lastTokenInfo = null;
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) break;
-
-          // 받은 chunk를 문자열로 변환
-          buffer += decoder.decode(value, { stream: true });
-
-          // JSON 라인 파싱 (Gemini는 줄바꿈으로 구분된 JSON 반환)
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || ''; // 마지막 불완전한 줄은 버퍼에 보관
-
-          for (const line of lines) {
-            if (line.trim() === '') continue;
-
-            try {
-              const parsed = JSON.parse(line);
-              const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-              if (text) {
-                fullText += text;
-
-                // 진행률 콜백 (받은 텍스트 길이 기반으로 예측)
-                // 평균적으로 3000자 정도 생성된다고 가정
-                if (onProgress) {
-                  const estimatedProgress = Math.min((fullText.length / 3000) * 100, 95);
-                  onProgress(estimatedProgress);
-                }
-              }
-
-              // 토큰 사용량 정보 추출 (마지막 chunk에 포함됨)
-              if (parsed?.usageMetadata) {
-                lastTokenInfo = {
-                  prompt: parsed.usageMetadata.promptTokenCount || 0,
-                  completion: parsed.usageMetadata.candidatesTokenCount || 0,
-                  total: parsed.usageMetadata.totalTokenCount || 0,
-                };
-              }
-            } catch (e) {
-              // JSON 파싱 에러는 무시 (불완전한 chunk일 수 있음)
-            }
-          }
-        }
-      } catch (streamError) {
-        // 스트리밍 중 에러 발생 시 로그 출력하고 계속 진행
-        console.warn('⚠️ 스트리밍 중단됨:', streamError);
-        console.log('📝 받은 텍스트 길이:', fullText.length);
+      // 토큰 사용량 정보 추출
+      if (data?.usageMetadata) {
+        const tokenInfo = {
+          prompt: data.usageMetadata.promptTokenCount || 0,
+          completion: data.usageMetadata.candidatesTokenCount || 0,
+          total: data.usageMetadata.totalTokenCount || 0,
+        };
+        setCumulativeTokens(prev => prev + tokenInfo.total);
+        console.log('📊 이번 호출 토큰:', tokenInfo);
+        console.log('📊 누적 토큰:', cumulativeTokens + tokenInfo.total);
       }
 
-      // 누적 토큰 사용량 업데이트
-      if (lastTokenInfo) {
-        setCumulativeTokens(prev => prev + lastTokenInfo.total);
-        console.log('📊 이번 호출 토큰:', lastTokenInfo);
-        console.log('📊 누적 토큰:', cumulativeTokens + lastTokenInfo.total);
+      // 진행률 콜백 (완료 시 95%)
+      if (onProgress) {
+        onProgress(95);
       }
 
-      // 받은 텍스트가 있으면 반환 (중단되어도 일부 받았다면 사용)
-      if (fullText) {
-        return fullText;
-      }
-
-      throw new Error('API 응답에서 텍스트를 추출할 수 없습니다.');
+      return text;
     } catch (error) {
       console.error('Gemini API 호출 실패:', error);
       alert(`API 호출에 실패했습니다. ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
