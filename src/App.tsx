@@ -43,7 +43,16 @@ export default function PRDPromptGenerator() {
   const [iterationSummary, setIterationSummary] = useState<string>('');
   const [prdSummary, setPrdSummary] = useState<string>('');
   const [progress, setProgress] = useState<number>(0); // 진행률 (0-100)
-  const [cumulativeTokens, setCumulativeTokens] = useState<number>(0); // 누적 토큰 사용량
+  const [cumulativeTokens, setCumulativeTokens] = useState<number>(() => {
+    // localStorage에서 초기값 로드
+    const saved = localStorage.getItem('prd-cumulative-tokens');
+    return saved ? parseInt(saved, 10) : 0;
+  }); // 누적 토큰 사용량
+
+  // 누적 토큰이 변경될 때마다 localStorage에 저장
+  useEffect(() => {
+    localStorage.setItem('prd-cumulative-tokens', cumulativeTokens.toString());
+  }, [cumulativeTokens]);
 
   // 채팅 스크롤 자동화를 위한 ref
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -3055,9 +3064,21 @@ ${finalPRD}
                 </div>
               )}
               {useRealAI && cumulativeTokens > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                  <span className="text-sm font-medium text-blue-900">📊 토큰:</span>
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <span className="text-sm font-medium text-blue-900">📊 누적:</span>
                   <span className="text-sm font-bold text-blue-600">{cumulativeTokens.toLocaleString()}</span>
+                  <button
+                    onClick={() => {
+                      if (confirm('토큰 카운터를 초기화하시겠습니까?')) {
+                        setCumulativeTokens(0);
+                        localStorage.removeItem('prd-cumulative-tokens');
+                      }
+                    }}
+                    className="ml-2 text-xs text-gray-500 hover:text-red-600 transition-colors"
+                    title="토큰 카운터 초기화"
+                  >
+                    🔄
+                  </button>
                 </div>
               )}
               <button
