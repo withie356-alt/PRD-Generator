@@ -43,7 +43,7 @@ export default function PRDPromptGenerator() {
   const [iterationSummary, setIterationSummary] = useState<string>('');
   const [prdSummary, setPrdSummary] = useState<string>('');
   const [progress, setProgress] = useState<number>(0); // 진행률 (0-100)
-  const [tokenUsage, setTokenUsage] = useState<{ prompt: number; completion: number; total: number } | null>(null); // 토큰 사용량
+  const [cumulativeTokens, setCumulativeTokens] = useState<number>(0); // 누적 토큰 사용량
 
   // 채팅 스크롤 자동화를 위한 ref
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -344,10 +344,11 @@ export default function PRDPromptGenerator() {
         console.log('📝 받은 텍스트 길이:', fullText.length);
       }
 
-      // 토큰 사용량 업데이트
+      // 누적 토큰 사용량 업데이트
       if (lastTokenInfo) {
-        setTokenUsage(lastTokenInfo);
-        console.log('📊 토큰 사용량:', lastTokenInfo);
+        setCumulativeTokens(prev => prev + lastTokenInfo.total);
+        console.log('📊 이번 호출 토큰:', lastTokenInfo);
+        console.log('📊 누적 토큰:', cumulativeTokens + lastTokenInfo.total);
       }
 
       // 받은 텍스트가 있으면 반환 (중단되어도 일부 받았다면 사용)
@@ -3097,6 +3098,12 @@ ${finalPRD}
                   💡 현재 가상 데이터로 동작 중입니다. AI 연동 시 맞춤형 질문과 PRD 생성이 가능합니다
                 </div>
               )}
+              {useRealAI && cumulativeTokens > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <span className="text-sm font-medium text-blue-900">📊 토큰:</span>
+                  <span className="text-sm font-bold text-blue-600">{cumulativeTokens.toLocaleString()}</span>
+                </div>
+              )}
               <button
                 onClick={() => setShowApiKeyInput(!showApiKeyInput)}
                 className={`font-medium py-2.5 px-5 rounded-lg transition-colors text-sm border ${
@@ -3605,12 +3612,6 @@ ${finalPRD}
                       <CircularProgress percentage={progress} />
                       <p className="text-gray-900 font-medium mb-1 mt-4">이터레이션 계획 생성 중</p>
                       <p className="text-gray-600 text-sm">사용자 답변을 분석하고 있습니다</p>
-                      {tokenUsage && (
-                        <div className="mt-4 text-xs text-gray-500">
-                          <p>📊 토큰 사용량: {tokenUsage.total.toLocaleString()}</p>
-                          <p className="text-gray-400">(입력: {tokenUsage.prompt.toLocaleString()} / 출력: {tokenUsage.completion.toLocaleString()})</p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ) : (
@@ -3781,12 +3782,6 @@ ${finalPRD}
                       <CircularProgress percentage={progress} />
                       <p className="text-gray-900 font-medium mb-1 mt-4">사용자 스토리 생성 중</p>
                       <p className="text-gray-600 text-sm">페르소나 분석 및 맞춤형 스토리 작성 중</p>
-                      {tokenUsage && (
-                        <div className="mt-4 text-xs text-gray-500">
-                          <p>📊 토큰 사용량: {tokenUsage.total.toLocaleString()}</p>
-                          <p className="text-gray-400">(입력: {tokenUsage.prompt.toLocaleString()} / 출력: {tokenUsage.completion.toLocaleString()})</p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ) : (
@@ -3953,12 +3948,6 @@ ${finalPRD}
                       <CircularProgress percentage={progress} />
                       <p className="text-gray-900 font-medium mb-1 mt-4">최종 PRD 생성 중</p>
                       <p className="text-gray-600 text-sm">모든 정보를 통합하고 보완하여 완성도 높은 PRD 작성 중</p>
-                      {tokenUsage && (
-                        <div className="mt-4 text-xs text-gray-500">
-                          <p>📊 토큰 사용량: {tokenUsage.total.toLocaleString()}</p>
-                          <p className="text-gray-400">(입력: {tokenUsage.prompt.toLocaleString()} / 출력: {tokenUsage.completion.toLocaleString()})</p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ) : (
