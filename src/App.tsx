@@ -63,6 +63,7 @@ export default function PRDPromptGenerator() {
   const [prdSummary, setPrdSummary] = useState<string>('');
   const [progress, setProgress] = useState<number>(0); // 진행률 (0-100)
   const [apiError, setApiError] = useState<string>(''); // API 에러 메시지
+  const [showErrorDetails, setShowErrorDetails] = useState<boolean>(false); // 에러 상세 펼침 상태
   const [cumulativeTokens, setCumulativeTokens] = useState<number>(() => {
     // localStorage에서 초기값 로드
     const saved = localStorage.getItem('prd-cumulative-tokens');
@@ -1178,6 +1179,7 @@ ${appGuide ? `\n### 참고할 디자인 가이드 (사용자가 언급한 앱 �
     setIsProcessing(true);
     setProgress(0);
     setApiError(''); // 에러 초기화
+    setShowErrorDetails(false); // 에러 상세 접기
     setIterationPlan(''); // 이전 데이터 초기화
     setIterationSummary(''); // 이전 요약 초기화
     setCurrentStep(3); // Step 3으로 먼저 전환
@@ -1444,6 +1446,7 @@ ${result}`;
     setIsProcessing(true);
     setProgress(0);
     setApiError(''); // 에러 초기화
+    setShowErrorDetails(false); // 에러 상세 접기
     setUserStories(''); // 이전 데이터 초기화
     setCurrentStep(4); // 즉시 Step 4로 전환
     setModificationHistory([]); // 수정 기록 초기화
@@ -1660,6 +1663,7 @@ ${iterationPlan}
     setIsProcessing(true);
     setProgress(0);
     setApiError(''); // 에러 초기화
+    setShowErrorDetails(false); // 에러 상세 접기
     setFinalPRD(''); // 이전 데이터 초기화
     setPrdSummary(''); // 이전 요약 초기화
     setCurrentStep(5); // 즉시 Step 5로 전환
@@ -3677,20 +3681,35 @@ ${finalPRD}
                 </div>
                 {apiError ? (
                   <div className="flex items-center justify-center flex-1">
-                    <div className="text-center max-w-md">
+                    <div className="text-center max-w-md w-full">
                       <div className="text-red-500 mb-4">
                         <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <p className="text-gray-900 font-medium mb-2">생성 실패</p>
-                        <p className="text-gray-600 text-sm mb-4 whitespace-pre-wrap">{apiError}</p>
+                        <p className="text-gray-900 font-medium mb-4">생성 실패</p>
                       </div>
                       <button
                         onClick={generateIterationPlan}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors mb-4"
                       >
                         다시 시도
                       </button>
+                      <div className="mt-4">
+                        <button
+                          onClick={() => setShowErrorDetails(!showErrorDetails)}
+                          className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 mx-auto"
+                        >
+                          {showErrorDetails ? '에러 상세 접기' : '에러 상세 보기'}
+                          <svg className={`w-4 h-4 transition-transform ${showErrorDetails ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showErrorDetails && (
+                          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-left">
+                            <p className="text-gray-700 text-xs whitespace-pre-wrap font-mono">{apiError}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : isProcessing ? (
@@ -3865,20 +3884,35 @@ ${finalPRD}
                 </div>
                 {apiError ? (
                   <div className="flex items-center justify-center flex-1">
-                    <div className="text-center max-w-md">
+                    <div className="text-center max-w-md w-full">
                       <div className="text-red-500 mb-4">
                         <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <p className="text-gray-900 font-medium mb-2">생성 실패</p>
-                        <p className="text-gray-600 text-sm mb-4 whitespace-pre-wrap">{apiError}</p>
+                        <p className="text-gray-900 font-medium mb-4">생성 실패</p>
                       </div>
                       <button
                         onClick={generateUserStories}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors mb-4"
                       >
                         다시 시도
                       </button>
+                      <div className="mt-4">
+                        <button
+                          onClick={() => setShowErrorDetails(!showErrorDetails)}
+                          className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 mx-auto"
+                        >
+                          {showErrorDetails ? '에러 상세 접기' : '에러 상세 보기'}
+                          <svg className={`w-4 h-4 transition-transform ${showErrorDetails ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showErrorDetails && (
+                          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-left">
+                            <p className="text-gray-700 text-xs whitespace-pre-wrap font-mono">{apiError}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : isProcessing ? (
@@ -4049,20 +4083,35 @@ ${finalPRD}
                 </div>
                 {apiError ? (
                   <div className="flex items-center justify-center flex-1">
-                    <div className="text-center max-w-md">
+                    <div className="text-center max-w-md w-full">
                       <div className="text-red-500 mb-4">
                         <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <p className="text-gray-900 font-medium mb-2">생성 실패</p>
-                        <p className="text-gray-600 text-sm mb-4 whitespace-pre-wrap">{apiError}</p>
+                        <p className="text-gray-900 font-medium mb-4">생성 실패</p>
                       </div>
                       <button
                         onClick={generateFinalPRD}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors mb-4"
                       >
                         다시 시도
                       </button>
+                      <div className="mt-4">
+                        <button
+                          onClick={() => setShowErrorDetails(!showErrorDetails)}
+                          className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 mx-auto"
+                        >
+                          {showErrorDetails ? '에러 상세 접기' : '에러 상세 보기'}
+                          <svg className={`w-4 h-4 transition-transform ${showErrorDetails ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showErrorDetails && (
+                          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-left">
+                            <p className="text-gray-700 text-xs whitespace-pre-wrap font-mono">{apiError}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : isProcessing ? (
