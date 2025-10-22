@@ -16,7 +16,8 @@ interface Question {
 
 export default function PRDPromptGenerator() {
   // 상수 정의
-  const REQUIRED_ANSWERS = 2;
+  const BASIC_INFO_REQUIRED = 6; // 1단계: Design Thinking 기본정보 질문 개수
+  const REQUIRED_ANSWERS = 2; // 2단계: 디자인 화면설계 질문 개수
   const COPY_FEEDBACK_DURATION = 2000;
   const AI_RESPONSE_DELAY = 500;
   const MOCK_PROCESSING_DELAY = 1500;
@@ -133,7 +134,7 @@ export default function PRDPromptGenerator() {
           handleProblemSubmit();
         } else if (currentStep === 1) {
           const userAnswers = chatMessages.filter(m => m.type === 'user').length;
-          if (userAnswers >= REQUIRED_ANSWERS) {
+          if (userAnswers >= BASIC_INFO_REQUIRED) {
             generateDetailedInfo();
           }
         } else if (currentStep === 2) {
@@ -503,7 +504,7 @@ export default function PRDPromptGenerator() {
 
     const userAnswers = newMessages.filter(m => m.type === 'user').length;
 
-    if (userAnswers < REQUIRED_ANSWERS) {
+    if (userAnswers < BASIC_INFO_REQUIRED) {
       if (useRealAI) {
         setIsProcessing(true);
         
@@ -532,7 +533,7 @@ ${conversationHistory}
 
 사용자가 ${userAnswers}개의 질문에 답변했습니다.
 이제 대화 맥락을 고려하여 다음으로 가장 중요한 질문 1개를 만들어주세요.
-총 ${REQUIRED_ANSWERS}개 질문 중 ${userAnswers + 1}번째 질문입니다.
+총 ${BASIC_INFO_REQUIRED}개 질문 중 ${userAnswers + 1}번째 질문입니다.
 
 디자인 씽킹 기반 질문 가이드 (${userAnswers + 1}번째):
 1번째: 페르소나 & 시나리오
@@ -3358,7 +3359,7 @@ ${finalPRD}
                 <div className="mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 mb-2">사용자 이해하기</h2>
                   <p className="text-gray-600 text-sm font-medium">
-                    디자인 씽킹 방식으로 사용자와 문제를 깊이 이해합니다 <span className="text-blue-600 font-bold">({chatMessages.filter(m => m.type === 'user').length}/{REQUIRED_ANSWERS})</span>
+                    디자인 씽킹 방식으로 사용자와 문제를 깊이 이해합니다 <span className="text-blue-600 font-bold">({chatMessages.filter(m => m.type === 'user').length}/{BASIC_INFO_REQUIRED})</span>
                   </p>
                 </div>
                 <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-3 scroll-smooth pr-4">
@@ -3406,7 +3407,7 @@ ${finalPRD}
                     전송
                   </button>
                 </div>
-                {chatMessages.filter(m => m.type === 'user').length >= REQUIRED_ANSWERS && !isProcessing && (
+                {chatMessages.filter(m => m.type === 'user').length >= BASIC_INFO_REQUIRED && !isProcessing && (
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                     <div className="flex flex-col gap-1">
                       <button
@@ -3435,7 +3436,7 @@ ${finalPRD}
                     </div>
                   </div>
                 )}
-                {chatMessages.filter(m => m.type === 'user').length < REQUIRED_ANSWERS && (
+                {chatMessages.filter(m => m.type === 'user').length < BASIC_INFO_REQUIRED && (
                   <div className="mt-2 flex flex-col gap-1">
                     <button
                       onClick={goBack}
