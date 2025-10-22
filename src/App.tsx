@@ -32,11 +32,25 @@ export default function PRDPromptGenerator() {
   const [copied, setCopied] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showAiSettings, setShowAiSettings] = useState<boolean>(false);
-  const [aiMode, setAiMode] = useState<'real' | 'mock'>('real'); // real: 실제 API, mock: 가상 데이터
-  const [aiProvider, setAiProvider] = useState<'gemini' | 'openai' | 'miso'>('gemini');
-  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
-  const [openaiApiKey, setOpenaiApiKey] = useState<string>('');
-  const [misoApiKey, setMisoApiKey] = useState<string>('');
+  const [aiMode, setAiMode] = useState<'real' | 'mock'>(() => {
+    const saved = localStorage.getItem('prd-ai-mode');
+    return (saved as 'real' | 'mock') || 'real';
+  });
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'openai' | 'miso'>(() => {
+    const saved = localStorage.getItem('prd-ai-provider');
+    return (saved as 'gemini' | 'openai' | 'miso') || 'gemini';
+  });
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
+    return localStorage.getItem('prd-gemini-api-key') || '';
+  });
+  const [openaiApiKey, setOpenaiApiKey] = useState<string>(() => {
+    return localStorage.getItem('prd-openai-api-key') || '';
+  });
+  const [misoApiKey, setMisoApiKey] = useState<string>(() => {
+    return localStorage.getItem('prd-miso-api-key') || '';
+  });
+  const [isTestingApiKey, setIsTestingApiKey] = useState<boolean>(false);
+  const [apiKeyTestResult, setApiKeyTestResult] = useState<'success' | 'error' | null>(null);
   const useRealAI = aiMode === 'real'; // aiMode에 따라 결정
   const [modificationRequest, setModificationRequest] = useState<string>('');
   const [modificationHistory, setModificationHistory] = useState<ChatMessage[]>([]);
@@ -225,6 +239,54 @@ export default function PRDPromptGenerator() {
     );
   };
 
+  // AI 설정 저장
+  const saveAiSettings = () => {
+    localStorage.setItem('prd-ai-mode', aiMode);
+    localStorage.setItem('prd-ai-provider', aiProvider);
+    localStorage.setItem('prd-gemini-api-key', geminiApiKey);
+    localStorage.setItem('prd-openai-api-key', openaiApiKey);
+    localStorage.setItem('prd-miso-api-key', misoApiKey);
+    setShowAiSettings(false);
+    setApiKeyTestResult(null);
+  };
+
+  // API 키 테스트
+  const testApiKey = async () => {
+    if (aiProvider === 'gemini' && !geminiApiKey.trim()) {
+      alert('API 키를 입력해주세요.');
+      return;
+    }
+
+    setIsTestingApiKey(true);
+    setApiKeyTestResult(null);
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (geminiApiKey) {
+        headers['X-Custom-API-Key'] = geminiApiKey;
+      }
+
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt: '안녕하세요. 테스트입니다.' })
+      });
+
+      if (response.ok) {
+        setApiKeyTestResult('success');
+      } else {
+        setApiKeyTestResult('error');
+      }
+    } catch (error) {
+      console.error('API 키 테스트 실패:', error);
+      setApiKeyTestResult('error');
+    } finally {
+      setIsTestingApiKey(false);
+    }
+  };
 
   // Gemini API 호출 함수 (프록시 사용, 자동 재시도 3회)
   const callGeminiAPI = async (
@@ -4191,19 +4253,65 @@ ${finalPRD}
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Gemini API 키 (선택사항)
                     </label>
-                    <p className="text-xs text-gray-500 mb-3">
-                      별도 API 키가 없다면 기본 키가 사용됩니다.
-                      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
-                        발급받기
+
+                    {/* 안내 메시지 */}
+                    <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-900 mb-2">
+                        <strong>💡 API 키 사용 방법:</strong>
+                      </p>
+                      <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                        <li><strong>기본 사용:</strong> 비워두면 공용 API 키로 자동 연결됩니다.</li>
+                        <li><strong>개인 키 사용:</strong> 본인의 API 키를 입력하면 해당 키로 연결됩니다.</li>
+                        <li><strong>무료 발급:</strong> Google AI Studio에서 무료로 발급 가능합니다.</li>
+                        <li><strong>보안:</strong> 입력한 키는 브라우저에만 저장되며 안전합니다.</li>
+                      </ul>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        value={geminiApiKey}
+                        onChange={(e) => {
+                          setGeminiApiKey(e.target.value);
+                          setApiKeyTestResult(null);
+                        }}
+                        placeholder="선택사항 - 비워두면 기본 키 사용"
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                      />
+                      {geminiApiKey && (
+                        <button
+                          onClick={testApiKey}
+                          disabled={isTestingApiKey}
+                          className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors text-sm disabled:opacity-50"
+                        >
+                          {isTestingApiKey ? '테스트 중...' : '연결 테스트'}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 테스트 결과 */}
+                    {apiKeyTestResult === 'success' && (
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center gap-2">
+                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-xs text-green-800">✅ API 키가 정상적으로 연결되었습니다!</span>
+                      </div>
+                    )}
+                    {apiKeyTestResult === 'error' && (
+                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded flex items-center gap-2">
+                        <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <span className="text-xs text-red-800">❌ API 키가 유효하지 않습니다. 다시 확인해주세요.</span>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-gray-500 mt-2">
+                      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                        🔗 Google AI Studio에서 무료 API 키 발급받기
                       </a>
                     </p>
-                    <input
-                      type="password"
-                      value={geminiApiKey}
-                      onChange={(e) => setGeminiApiKey(e.target.value)}
-                      placeholder="선택사항 - 비워두면 기본 키 사용"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
-                    />
                   </div>
                 )}
 
@@ -4244,13 +4352,16 @@ ${finalPRD}
             {/* 버튼 */}
             <div className="flex gap-3">
               <button
-                onClick={() => setShowAiSettings(false)}
+                onClick={() => {
+                  setShowAiSettings(false);
+                  setApiKeyTestResult(null);
+                }}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
               >
                 취소
               </button>
               <button
-                onClick={() => setShowAiSettings(false)}
+                onClick={saveAiSettings}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
               >
                 저장
