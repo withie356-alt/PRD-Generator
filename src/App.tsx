@@ -31,7 +31,13 @@ export default function PRDPromptGenerator() {
   const [finalPRD, setFinalPRD] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const useRealAI = true; // 프록시 API 사용으로 항상 활성화
+  const [showAiSettings, setShowAiSettings] = useState<boolean>(false);
+  const [aiMode, setAiMode] = useState<'real' | 'mock'>('real'); // real: 실제 API, mock: 가상 데이터
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'openai' | 'miso'>('gemini');
+  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [openaiApiKey, setOpenaiApiKey] = useState<string>('');
+  const [misoApiKey, setMisoApiKey] = useState<string>('');
+  const useRealAI = aiMode === 'real'; // aiMode에 따라 결정
   const [modificationRequest, setModificationRequest] = useState<string>('');
   const [modificationHistory, setModificationHistory] = useState<ChatMessage[]>([]);
   const [detailedChatMessages, setDetailedChatMessages] = useState<ChatMessage[]>([]);
@@ -229,12 +235,19 @@ export default function PRDPromptGenerator() {
     const MAX_RETRIES = 3;
 
     try {
+      // 사용자 지정 API 키가 있으면 헤더에 포함
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (geminiApiKey) {
+        headers['X-Custom-API-Key'] = geminiApiKey;
+      }
+
       // Vercel Serverless Function 호출
       const response = await fetch('/api/gemini', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ prompt })
       });
 
@@ -3002,9 +3015,18 @@ ${finalPRD}
                   </button>
                 </div>
               )}
-              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                <span className="text-sm font-medium text-blue-900">✅ AI 활성화</span>
-              </div>
+              <button
+                onClick={() => setShowAiSettings(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+              >
+                <span className="text-sm font-medium text-blue-900">
+                  {aiMode === 'mock' ? '🧪 테스트 모드' : '✅ AI 활성화'}
+                </span>
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
             </div>
           </div>
           
@@ -4071,6 +4093,172 @@ ${finalPRD}
           </div>
         </div>
       </div>
+
+      {/* AI 설정 모달 */}
+      {showAiSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowAiSettings(false)}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">AI 설정</h3>
+              <button
+                onClick={() => setShowAiSettings(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 모드 선택 */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">모드 선택</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setAiMode('real')}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    aiMode === 'real'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">🚀</div>
+                  <div className="font-medium text-gray-900">실제 AI</div>
+                  <div className="text-xs text-gray-500 mt-1">실제 API를 호출하여 PRD 생성</div>
+                </button>
+                <button
+                  onClick={() => setAiMode('mock')}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    aiMode === 'mock'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">🧪</div>
+                  <div className="font-medium text-gray-900">테스트 모드</div>
+                  <div className="text-xs text-gray-500 mt-1">가상 데이터로 빠르게 테스트</div>
+                </button>
+              </div>
+            </div>
+
+            {/* AI 제공자 선택 (실제 AI 모드일 때만) */}
+            {aiMode === 'real' && (
+              <>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">AI 제공자</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      onClick={() => setAiProvider('gemini')}
+                      className={`p-3 border-2 rounded-lg transition-all ${
+                        aiProvider === 'gemini'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-medium text-gray-900 text-sm">Google Gemini</div>
+                      <div className="text-xs text-gray-500 mt-1">무료 사용 가능</div>
+                    </button>
+                    <button
+                      onClick={() => setAiProvider('openai')}
+                      className={`p-3 border-2 rounded-lg transition-all ${
+                        aiProvider === 'openai'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      disabled
+                    >
+                      <div className="font-medium text-gray-400 text-sm">OpenAI</div>
+                      <div className="text-xs text-gray-400 mt-1">준비 중</div>
+                    </button>
+                    <button
+                      onClick={() => setAiProvider('miso')}
+                      className={`p-3 border-2 rounded-lg transition-all ${
+                        aiProvider === 'miso'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      disabled
+                    >
+                      <div className="font-medium text-gray-400 text-sm">MISO</div>
+                      <div className="text-xs text-gray-400 mt-1">준비 중</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* API 키 입력 */}
+                {aiProvider === 'gemini' && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Gemini API 키 (선택사항)
+                    </label>
+                    <p className="text-xs text-gray-500 mb-3">
+                      별도 API 키가 없다면 기본 키가 사용됩니다.
+                      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
+                        발급받기
+                      </a>
+                    </p>
+                    <input
+                      type="password"
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      placeholder="선택사항 - 비워두면 기본 키 사용"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                    />
+                  </div>
+                )}
+
+                {aiProvider === 'openai' && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      OpenAI API 키
+                    </label>
+                    <input
+                      type="password"
+                      value={openaiApiKey}
+                      onChange={(e) => setOpenaiApiKey(e.target.value)}
+                      placeholder="OpenAI API 키를 입력하세요"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                      disabled
+                    />
+                  </div>
+                )}
+
+                {aiProvider === 'miso' && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      MISO API 키
+                    </label>
+                    <input
+                      type="password"
+                      value={misoApiKey}
+                      onChange={(e) => setMisoApiKey(e.target.value)}
+                      placeholder="MISO API 키를 입력하세요"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                      disabled
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* 버튼 */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowAiSettings(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => setShowAiSettings(false)}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
+              >
+                저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

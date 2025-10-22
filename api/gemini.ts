@@ -10,7 +10,7 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, X-Custom-API-Key'
   );
 
   // OPTIONS 요청 처리 (CORS preflight)
@@ -24,8 +24,9 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // 환경변수에서 API 키 가져오기
-  const apiKey = process.env.GEMINI_API_KEY;
+  // 커스텀 API 키 또는 환경변수에서 API 키 가져오기
+  const customApiKey = req.headers['x-custom-api-key'] as string | undefined;
+  const apiKey = customApiKey || process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
