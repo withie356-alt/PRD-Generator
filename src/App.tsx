@@ -1111,6 +1111,7 @@ ${interaction}
   const generateIterationPlan = async () => {
     setIsProcessing(true);
     setProgress(0);
+    setApiError(''); // 에러 초기화
     setIterationPlan(''); // 이전 데이터 초기화
     setIterationSummary(''); // 이전 요약 초기화
     setCurrentStep(3); // Step 3으로 먼저 전환
@@ -1376,6 +1377,7 @@ ${result}`;
   const generateUserStories = async () => {
     setIsProcessing(true);
     setProgress(0);
+    setApiError(''); // 에러 초기화
     setUserStories(''); // 이전 데이터 초기화
     setCurrentStep(4); // 즉시 Step 4로 전환
     setModificationHistory([]); // 수정 기록 초기화
@@ -1591,6 +1593,7 @@ ${iterationPlan}
   const generateFinalPRD = async () => {
     setIsProcessing(true);
     setProgress(0);
+    setApiError(''); // 에러 초기화
     setFinalPRD(''); // 이전 데이터 초기화
     setPrdSummary(''); // 이전 요약 초기화
     setCurrentStep(5); // 즉시 Step 5로 전환
@@ -3494,7 +3497,25 @@ ${finalPRD}
                     </button>
                   )}
                 </div>
-                {isProcessing ? (
+                {apiError ? (
+                  <div className="flex items-center justify-center flex-1">
+                    <div className="text-center max-w-md">
+                      <div className="text-red-500 mb-4">
+                        <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-gray-900 font-medium mb-2">생성 실패</p>
+                        <p className="text-gray-600 text-sm mb-4 whitespace-pre-wrap">{apiError}</p>
+                      </div>
+                      <button
+                        onClick={generateIterationPlan}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
+                      >
+                        다시 시도
+                      </button>
+                    </div>
+                  </div>
+                ) : isProcessing ? (
                   <div className="flex items-center justify-center flex-1">
                     <div className="text-center">
                       <CircularProgress percentage={progress} />
@@ -3664,7 +3685,25 @@ ${finalPRD}
                     </button>
                   )}
                 </div>
-                {isProcessing ? (
+                {apiError ? (
+                  <div className="flex items-center justify-center flex-1">
+                    <div className="text-center max-w-md">
+                      <div className="text-red-500 mb-4">
+                        <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-gray-900 font-medium mb-2">생성 실패</p>
+                        <p className="text-gray-600 text-sm mb-4 whitespace-pre-wrap">{apiError}</p>
+                      </div>
+                      <button
+                        onClick={generateUserStories}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
+                      >
+                        다시 시도
+                      </button>
+                    </div>
+                  </div>
+                ) : isProcessing ? (
                   <div className="flex items-center justify-center flex-1">
                     <div className="text-center">
                       <CircularProgress percentage={progress} />
@@ -3830,7 +3869,25 @@ ${finalPRD}
                     </button>
                   )}
                 </div>
-                {isProcessing ? (
+                {apiError ? (
+                  <div className="flex items-center justify-center flex-1">
+                    <div className="text-center max-w-md">
+                      <div className="text-red-500 mb-4">
+                        <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-gray-900 font-medium mb-2">생성 실패</p>
+                        <p className="text-gray-600 text-sm mb-4 whitespace-pre-wrap">{apiError}</p>
+                      </div>
+                      <button
+                        onClick={generateFinalPRD}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
+                      >
+                        다시 시도
+                      </button>
+                    </div>
+                  </div>
+                ) : isProcessing ? (
                   <div className="flex items-center justify-center flex-1">
                     <div className="text-center">
                       <CircularProgress percentage={progress} />
