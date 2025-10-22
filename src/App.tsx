@@ -98,19 +98,25 @@ export default function PRDPromptGenerator() {
   const basicQASummaryRef = useRef<HTMLDivElement>(null);
   const detailedQASummaryRef = useRef<HTMLDivElement>(null);
 
-  // 채팅 메시지가 업데이트될 때마다 스크롤을 맨 아래로
+  // 이전 메시지 개수 추적
+  const prevChatMessagesLength = useRef<number>(0);
+  const prevDetailedMessagesLength = useRef<number>(0);
+
+  // 채팅 메시지가 추가될 때만 스크롤을 맨 아래로 (메시지 개수 변화 감지)
   useEffect(() => {
-    if (chatContainerRef.current) {
+    if (chatContainerRef.current && chatMessages.length > prevChatMessagesLength.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [chatMessages, isProcessing]);
+    prevChatMessagesLength.current = chatMessages.length;
+  }, [chatMessages]);
 
-  // 상세 정보 채팅 메시지가 업데이트될 때마다 스크롤을 맨 아래로
+  // 상세 정보 채팅 메시지가 추가될 때만 스크롤을 맨 아래로
   useEffect(() => {
-    if (detailedChatContainerRef.current) {
+    if (detailedChatContainerRef.current && detailedChatMessages.length > prevDetailedMessagesLength.current) {
       detailedChatContainerRef.current.scrollTop = detailedChatContainerRef.current.scrollHeight;
     }
-  }, [detailedChatMessages, isProcessing]);
+    prevDetailedMessagesLength.current = detailedChatMessages.length;
+  }, [detailedChatMessages]);
 
   // Step 1 질문답변 정리 창 스크롤 자동화
   useEffect(() => {
