@@ -3405,6 +3405,14 @@ ${finalPRD}
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !isProcessing && handleChatSubmit()}
+                    onFocus={(e) => {
+                      // 포커스 시 커서를 맨 뒤로 이동
+                      const input = e.target;
+                      const length = input.value.length;
+                      setTimeout(() => {
+                        input.setSelectionRange(length, length);
+                      }, 0);
+                    }}
                     placeholder="답변을 입력하세요"
                     disabled={isProcessing}
                     className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:outline-none transition-all duration-200 disabled:opacity-50 text-sm"
@@ -3549,6 +3557,14 @@ ${finalPRD}
                     value={detailedUserInput}
                     onChange={(e) => setDetailedUserInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !isProcessing && handleDetailedChatSubmit()}
+                    onFocus={(e) => {
+                      // 포커스 시 커서를 맨 뒤로 이동
+                      const input = e.target;
+                      const length = input.value.length;
+                      setTimeout(() => {
+                        input.setSelectionRange(length, length);
+                      }, 0);
+                    }}
                     placeholder="답변을 입력하세요"
                     disabled={isProcessing}
                     className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:outline-none transition-all duration-200 disabled:opacity-50 text-sm"
