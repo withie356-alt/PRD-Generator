@@ -4425,7 +4425,7 @@ ${finalPRD}
                         <strong>💡 API 키 사용 방법:</strong>
                       </p>
                       <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
-                        <li><strong>기본 사용:</strong> 비워두면 공용 API 키로 자동 연결됩니다.</li>
+                        <li><strong>기본 사용:</strong> 비워두면 공용 API 키로 자동 연결됩니다.(한도있음)</li>
                         <li><strong>개인 키 사용:</strong> 본인의 API 키를 입력하면 해당 키로 연결됩니다.</li>
                         <li><strong>무료 발급:</strong> Google AI Studio에서 무료로 발급 가능합니다.</li>
                         <li><strong>보안:</strong> 입력한 키는 브라우저에만 저장되며 안전합니다.</li>
