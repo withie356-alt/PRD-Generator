@@ -16,7 +16,7 @@ interface Question {
 
 export default function PRDPromptGenerator() {
   // 상수 정의
-  const REQUIRED_ANSWERS = 6;
+  const REQUIRED_ANSWERS = 3;
   const COPY_FEEDBACK_DURATION = 2000;
   const AI_RESPONSE_DELAY = 500;
   const MOCK_PROCESSING_DELAY = 1500;
