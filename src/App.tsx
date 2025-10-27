@@ -17,7 +17,7 @@ interface Question {
 export default function PRDPromptGenerator() {
   // 상수 정의
   const BASIC_INFO_REQUIRED = 6; // 1단계: Design Thinking 기본정보 질문 개수
-  const REQUIRED_ANSWERS = 2; // 2단계: 디자인 화면설계 질문 개수
+  const REQUIRED_ANSWERS = 3; // 2단계: 디자인 화면설계 질문 개수
   const COPY_FEEDBACK_DURATION = 2000;
   const AI_RESPONSE_DELAY = 500;
   const MOCK_PROCESSING_DELAY = 1500;
@@ -414,6 +414,10 @@ export default function PRDPromptGenerator() {
       {
         question: "[핵심 화면 & 사용자 여정] 사용자가 앱을 처음 열고 목표를 달성하기까지 거치는 3~5개 핵심 화면과 전체 흐름을 설명해주세요.",
         hint: "화면 + 여정 통합 예시:\n• 배민: ① 홈(맛집 리스트 탐색) → ② 메뉴 선택(상품 선택) → ③ 주문/결제(정보 입력) → ④ 배달 추적(실시간 확인) → ⑤ 리뷰(평가 작성)\n• 토스: ① 자산 대시보드(잔액 확인) → ② 송금(계좌 검색/금액 입력) → ③ 인증(비밀번호/생체) → ④ 완료(결과 확인)\n• 인스타그램: ① 피드(콘텐츠 탐색/스크롤) → ② 스토리(빠른 소비) → ③ 검색/탐색(새 콘텐츠 발견) → ④ 프로필(개인 페이지) → ⑤ DM(메시지)\n\n반드시 포함할 내용:\n① 화면 이름과 순서 (3~5개)\n② 각 화면의 핵심 정보/기능\n③ 사용자가 각 화면에서 하는 주요 액션\n④ 화면 간 이동 방식 (탭/클릭/스와이프)\n⑤ 예상 소요 시간 (전체 또는 단계별)"
+      },
+      {
+        question: "[앱 형태 & 기술 스택] 이 앱을 어떤 형태로 만들고 싶으신가요?",
+        hint: "📱 앱 형태 (택 1):\n• 웹 앱: 브라우저에서 접속 (예: 구글, 네이버처럼 주소 입력해서 사용)\n• 모바일 앱: 앱스토어/플레이스토어에서 다운로드 (예: 카카오톡, 인스타그램)\n• 하이브리드: 웹으로 만들되 앱처럼 설치 가능 (예: 토스, 당근마켓)\n• 데스크톱 앱: PC/Mac에 설치 (예: Notion 데스크톱, Slack)\n\n🛠 개발 방식 (초보자용 설명, 택 1):\n• 빠른 프로토타입: Vite + React (화면 빠르게 만들기 좋음, 배포 간단) ⭐ 추천\n• 본격 서비스: Next.js (검색 노출 필요, 대규모 서비스)\n• 간단한 페이지: HTML/CSS/JS (정적 페이지, GitHub Pages 무료 배포)\n\n📦 데이터 저장 (택 1):\n• 브라우저만: localStorage (간단, 무료, 브라우저 삭제 시 데이터 날아감) ⭐ 추천\n• 클라우드 DB: Firebase/Supabase (여러 사람이 데이터 공유, 유료 가능성)\n• 서버 직접 구축: PostgreSQL/MongoDB (완전한 제어, 서버 운영 필요)\n\n💡 예시 (입력 안 하면 이 기본값 사용):\n\"웹 앱으로 만들고, Vite + React로 빠르게 프로토타입 제작. 데이터는 localStorage에 저장하고, 나중에 필요하면 Firebase로 전환.\"\n\n📝 기본 설정 안내:\n- PRD는 /docs/PRD.md에 저장\n- 작업 내역은 /docs/TODOs.md에 기록\n- 테스트 코드, DB, 외부 API는 TODO에만 기록 (지금은 구현 안 함)\n- 데이터는 mock으로 보여주고, API 호출은 console.log로 대체"
       }
     ];
   };
@@ -950,9 +954,10 @@ Visual Design & UX/UI 방법론 기반 질문 가이드 (${userAnswers + 1}번�
 
     const userAnswers = detailedChatMessages.filter(m => m.type === 'user');
 
-    // 2개 답변 추출
+    // 3개 답변 추출
     const designSystem = userAnswers[0]?.content || ''; // 디자인 시스템 (스타일, 색상, 레이아웃)
     const screenJourney = userAnswers[1]?.content || ''; // 핵심 화면 & 사용자 여정
+    const techStack = userAnswers[2]?.content || ''; // 앱 형태 & 기술 스택
 
     // 참고 앱별 디자인 가이드
     const referenceAppGuides: Record<string, string> = {
@@ -1056,6 +1061,9 @@ ${designSystem}
 
 ### 2. 핵심 화면 & 사용자 여정
 ${screenJourney}
+
+### 3. 앱 형태 & 기술 스택
+${techStack || '기본값: 웹 앱, Vite + React, localStorage 저장, /docs/PRD.md 및 /docs/TODOs.md 활용'}
 
 ${appGuide ? `\n### 참고할 디자인 가이드 (사용자가 언급한 앱 기준):\n${appGuide}\n\n**중요**: 위 가이드의 구체적인 수치(색상 코드, px 값, 라운드 크기 등)를 최대한 그대로 사용하세요. 사용자가 이 앱 스타일을 원한다고 명시했으므로, 해당 앱의 디자인 패턴을 적극 반영해야 합니다.\n` : ''}
 
@@ -1699,10 +1707,11 @@ ${iterationPlan}
 각 PRD 섹션 작성 시 반드시 다음 매핑을 따르세요:
 - **섹션 2-4 (프로젝트 개요/문제 정의/해결 방안)**: Step 0 문제 설명 + Step 1의 6가지 Design Thinking 답변
 - **섹션 7 (기능 요구사항)**: Step 3 이터레이션 계획 + Step 4 사용자 스토리
-- **섹션 8-9 (비기능 요구사항/기술 스택)**: Step 1 페르소나 + Step 2 디자인 요구사항
+- **섹션 8-9 (비기능 요구사항/기술 스택)**: Step 1 페르소나 + Step 2 디자인 요구사항 + **Step 2의 앱 형태 & 기술 스택 답변**
 - **섹션 10 (주요 화면 구성)**: Step 2의 User Journey, Information Architecture, Wireflow
-- **섹션 11 (화면 구현 명세)**: Step 2의 14가지 디자인 답변을 CSS/컴포넌트 명세로 변환
-- **섹션 12-15 (데이터/API/보안/성능)**: Step 2 Data Input/Display + Step 4 사용자 스토리
+- **섹션 11 (화면 구현 명세)**: Step 2의 디자인 답변을 CSS/컴포넌트 명세로 변환
+- **섹션 12-15 (데이터/API/보안/성능)**: Step 2 Data Input/Display + Step 4 사용자 스토리 + **Step 2의 데이터 저장 방식**
+- **섹션 16 (구현 가이드)**: **Step 2의 기본 설정 (/docs/PRD.md, /docs/TODOs.md, mock 데이터, console.log 활용)**
 - **섹션 17-21 (테스트/출시/KPI/위험/로드맵)**: Step 1 성공 지표 + Step 3 이터레이션 + Step 4 Acceptance Criteria
 
 ## PRD Documentation Best Practice 가이드:
@@ -1927,29 +1936,43 @@ ${userStories}
 
 ## 9. 기술 스택
 
-### 9.1 프론트엔드
-[Step 2의 디자인 요구사항(Animation, Interaction, Mobile-First)과 Step 1의 페르소나 기술 수준을 고려한 기술 스택 제안]
-- **프레임워크**: [Step 2의 "[Animation & Interaction]"에서 언급된 복잡한 인터랙션이 있다면 React/Vue 제안, 간단하면 Vanilla JS 고려]
-- **스타일링**: [Step 2의 "[Design System & Brand Identity]"를 효과적으로 구현할 수 있는 방식 - Tailwind/CSS-in-JS 등]
-- **상태 관리**: [Step 2의 "[Data Input/Display]" 복잡도에 따라 Context API/Zustand/Redux 제안]
+**⭐ Step 2의 "[앱 형태 & 기술 스택]" 답변을 바탕으로 작성합니다.**
+**사용자가 선택한 내용을 우선 반영하고, 입력이 없으면 기본값(Vite + React, localStorage)을 사용합니다.**
 
-### 9.2 백엔드
-[Step 4 사용자 스토리와 Step 1 비즈니스 요구사항에 적합한 백엔드 기술]
-- [실시간 기능이 필요하면 WebSocket 지원 프레임워크]
-- [데이터 처리 복잡도에 따른 선택]
+### 9.1 앱 형태
+[Step 2에서 사용자가 선택한 앱 형태 - 웹 앱/모바일 앱/하이브리드/데스크톱 앱]
+- **플랫폼**: [사용자 선택 또는 기본값: 웹 앱 (브라우저 기반)]
+- **접근 방식**: [예: 반응형 웹, PWA, 네이티브 앱 등]
 
-### 9.3 데이터베이스
-[Step 4 사용자 스토리와 Step 2 "[Data Input/Display]"에서 도출된 데이터 특성에 맞는 DB 선택]
-- [관계형 데이터면 PostgreSQL/MySQL]
-- [문서형 데이터면 MongoDB]
+### 9.2 프론트엔드
+[Step 2에서 사용자가 선택한 개발 방식]
+- **프레임워크**: [사용자 선택 또는 기본값: Vite + React]
+  - 선택 이유: [사용자가 언급한 이유 또는 "빠른 프로토타입 개발, 간단한 배포"]
+- **스타일링**: Tailwind CSS (Step 2 디자인 시스템 구현용)
+- **상태 관리**: [프로젝트 복잡도에 따라 - 간단하면 React Hooks, 복잡하면 Zustand/Redux]
 
-### 9.4 인프라
+### 9.3 백엔드 (필요 시)
+[Step 4 사용자 스토리에서 서버 기능이 필요한지 판단]
+- **초기 버전**: 백엔드 없음 (프론트엔드만으로 구현)
+- **향후 확장**: [사용자 스토리에서 서버 기능이 필요하면 제안]
+
+### 9.4 데이터 저장
+[Step 2에서 사용자가 선택한 데이터 저장 방식]
+- **저장 방식**: [사용자 선택 또는 기본값: localStorage (브라우저 로컬 저장)]
+- **장점**: 간단한 구현, 서버 비용 없음, 빠른 프로토타입
+- **제약**: 브라우저 삭제 시 데이터 손실, 기기 간 동기화 불가
+- **향후 마이그레이션**: [필요 시 Firebase/Supabase로 전환 가능]
+
+### 9.5 인프라
 [Step 1의 성공 지표와 예상 사용자 규모를 고려한 배포 전략]
+- **호스팅**: Vercel/Netlify (정적 웹사이트 무료 호스팅)
+- **배포 방식**: Git 연동 자동 배포
+- **도메인**: [초기엔 무료 서브도메인, 이후 커스텀 도메인]
 
-### 9.5 개발 도구
-- 버전 관리: Git
-- CI/CD: [Step 3 이터레이션 계획을 지원할 수 있는 도구]
-- 협업 도구: [제안]
+### 9.6 개발 도구
+- **버전 관리**: Git + GitHub
+- **문서 관리**: /docs/PRD.md (본 문서), /docs/TODOs.md (작업 목록)
+- **협업 도구**: [필요 시 제안 - Slack, Notion 등]
 
 ---
 
@@ -2505,13 +2528,97 @@ const fetch[DataName] = async () => {
 
 ## 16. 구현 가이드
 
-위 PRD대로 앱을 제작해주세요. 단,
-- **문서화**: 위 내용 그대로 /docs/PRD.md로 저장
-- **작업 추적**: /docs/TODOs.md에 작업 내역 기록
-- **단계적 구현**: Step 3 이터레이션 1부터 순차적으로 개발
-- **테스트**: 각 이터레이션 완료 시 Step 4의 Acceptance Criteria로 검증
-- **미구현 항목**: 테스트 코드, DB 상세 설계, 외부 API 연동은 /docs/TODOs.md에 기록만
-- **UI/UX**: 모든 UI는 한글로 작성, Step 2의 UX/UI 설계 방법론 준수
+**⭐ Step 2의 "[앱 형태 & 기술 스택]" 기본 설정을 바탕으로 작성합니다.**
+
+### 16.1 프로젝트 구조
+\`\`\`
+project-root/
+├── /docs
+│   ├── PRD.md          # 본 PRD 문서 (이 내용 그대로 저장)
+│   └── TODOs.md        # 작업 내역 및 미구현 항목 기록
+├── /src
+│   ├── /components     # React 컴포넌트
+│   ├── /pages          # 페이지 (Step 2의 핵심 화면별)
+│   ├── /styles         # CSS/Tailwind 설정
+│   ├── /utils          # 유틸리티 함수
+│   └── /mock           # Mock 데이터 (실제 API 대신 사용)
+├── package.json        # Vite + React 설정
+└── README.md           # 프로젝트 설명
+\`\`\`
+
+### 16.2 개발 원칙
+[Step 2의 기본 설정 반영]
+
+**문서화**:
+- 이 PRD를 \`/docs/PRD.md\`에 그대로 저장
+- 모든 작업 내역을 \`/docs/TODOs.md\`에 기록하며 진행
+- 각 컴포넌트에 JSDoc 주석으로 설명 추가
+
+**단계적 구현**:
+- Step 3 이터레이션 1 (MVP)부터 순차적으로 개발
+- 각 이터레이션 완료 후 Step 4의 Acceptance Criteria로 검증
+- 완료된 기능을 /docs/TODOs.md에 체크
+
+**Mock 데이터 활용**:
+- 초기 버전은 실제 DB 없이 Mock 데이터로 구현
+- \`/src/mock/\` 폴더에 데이터 정의
+- 예시:
+\`\`\`typescript
+// /src/mock/users.ts
+export const mockUsers = [
+  { id: 1, name: "김철수", email: "kim@example.com" },
+  // ...
+];
+\`\`\`
+
+**API 호출 대체**:
+- 외부 API 호출은 console.log로 대체
+- 예시:
+\`\`\`typescript
+function saveData(data) {
+  console.log('API 호출 (추후 구현):', data);
+  // TODO: 실제 API 구현은 /docs/TODOs.md에 기록
+  return Promise.resolve({ success: true });
+}
+\`\`\`
+
+**미구현 항목 관리**:
+- 테스트 코드: /docs/TODOs.md에 "테스트 코드 작성" 항목 추가
+- DB 설계: /docs/TODOs.md에 "데이터베이스 마이그레이션" 항목 추가
+- 외부 API: /docs/TODOs.md에 "API 통합" 항목 추가
+
+**UI/UX 원칙**:
+- 모든 UI 텍스트는 한글로 작성
+- Step 2의 디자인 시스템(색상, 폰트, 버튼 등) 정확히 준수
+- Step 2의 User Journey에 따라 화면 흐름 구현
+
+### 16.3 개발 순서
+1. **환경 설정**: Vite + React 프로젝트 초기화
+2. **문서 생성**: /docs/PRD.md, /docs/TODOs.md 생성
+3. **디자인 시스템**: CSS 변수로 색상/폰트 정의 (Step 2 기반)
+4. **이터레이션 1**: MVP 핵심 기능 구현 (Step 3 참고)
+5. **이터레이션 2**: 확장 기능 추가
+6. **이터레이션 3**: 고급 기능 및 최적화
+
+### 16.4 /docs/TODOs.md 템플릿
+\`\`\`markdown
+# TODO List
+
+## 구현 완료
+- [x] 프로젝트 초기 설정
+- [x] PRD 문서 작성
+
+## 진행 중
+- [ ] 이터레이션 1: MVP 구현
+  - [ ] 화면 1 구현
+  - [ ] 화면 2 구현
+
+## 미구현 (추후 작업)
+- [ ] 단위 테스트 코드 작성
+- [ ] 데이터베이스 연동 (현재 localStorage 사용)
+- [ ] 외부 API 통합 (현재 console.log)
+- [ ] CI/CD 파이프라인 구축
+\`\`\`
 
 ---
 
