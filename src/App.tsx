@@ -3555,7 +3555,7 @@ ${finalPRD}
                     전송
                   </button>
                 </div>
-                {chatMessages.filter(m => m.type === 'user').length >= BASIC_INFO_REQUIRED && !isProcessing && (
+                {!isProcessing && (
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                     <div className="flex flex-col gap-1">
                       <button
@@ -3571,31 +3571,33 @@ ${finalPRD}
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <button
-                        onClick={generateDetailedInfo}
-                        disabled={isProcessing}
+                        onClick={() => {
+                          const userAnswers = chatMessages.filter(m => m.type === 'user').length;
+                          if (userAnswers < BASIC_INFO_REQUIRED) {
+                            const remaining = BASIC_INFO_REQUIRED - userAnswers;
+                            if (window.confirm(`아직 ${remaining}개의 질문이 남았습니다.\n\n질문을 건너뛰고 다음 단계로 이동하시겠습니까?\n(더 정확한 PRD를 위해 모든 질문에 답변하는 것을 권장합니다)`)) {
+                              generateDetailedInfo();
+                            }
+                          } else {
+                            generateDetailedInfo();
+                          }
+                        }}
+                        disabled={isProcessing || chatMessages.filter(m => m.type === 'user').length === 0}
                         className="text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium flex items-center gap-2 rounded-lg px-4 py-2 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
                       >
                         다음
                         <ArrowRight size={14} />
                       </button>
-                      <p className="text-xs text-gray-500 px-3">
-                        Ctrl + Enter로 다음 단계로 이동할 수 있습니다
-                      </p>
+                      {chatMessages.filter(m => m.type === 'user').length < BASIC_INFO_REQUIRED ? (
+                        <p className="text-xs text-amber-600 px-3">
+                          * 아직 {BASIC_INFO_REQUIRED - chatMessages.filter(m => m.type === 'user').length}개 질문이 남았습니다
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-500 px-3">
+                          Ctrl + Enter로 다음 단계로 이동할 수 있습니다
+                        </p>
+                      )}
                     </div>
-                  </div>
-                )}
-                {chatMessages.filter(m => m.type === 'user').length < BASIC_INFO_REQUIRED && (
-                  <div className="mt-2 flex flex-col gap-1">
-                    <button
-                      onClick={goBack}
-                      className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 rounded-lg px-3 py-2 hover:bg-gray-100 transition-colors"
-                    >
-                      <ArrowLeft size={14} />
-                      이전 단계
-                    </button>
-                    <p className="text-xs text-amber-600 px-3">
-                      * 현재 단계 내용이 삭제됩니다
-                    </p>
                   </div>
                 )}
               </div>
@@ -3611,7 +3613,30 @@ ${finalPRD}
                 <div className="mt-4 flex-shrink-0">
                   {chatMessages.filter(m => m.type === 'user').length > 0 && (
                     <div className="mt-4">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">질문 답변 정리</h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-semibold text-gray-900">질문 답변 정리</h4>
+                        <button
+                          onClick={() => {
+                            const qaText = chatMessages
+                              .filter(m => m.type === 'ai' && m.questionIndex !== undefined)
+                              .map((aiMsg) => {
+                                const userAnswer = chatMessages.find(
+                                  (m, i) => m.type === 'user' && i > chatMessages.indexOf(aiMsg)
+                                );
+                                const questionOnly = aiMsg.content.split('\n')[0];
+                                return userAnswer ? `Q: ${questionOnly}\nA: ${userAnswer.content}` : null;
+                              })
+                              .filter(Boolean)
+                              .join('\n\n');
+                            navigator.clipboard.writeText(qaText);
+                            alert('질문-답변이 복사되었습니다!');
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                        >
+                          <Copy size={12} />
+                          복사
+                        </button>
+                      </div>
                       <div ref={basicQASummaryRef} className="bg-gray-50 p-3 border border-gray-200 rounded overflow-y-auto" style={{height: '340px'}}>
                         <div className="space-y-2.5">
                           {chatMessages
@@ -3707,7 +3732,7 @@ ${finalPRD}
                     전송
                   </button>
                 </div>
-                {detailedChatMessages.filter(m => m.type === 'user').length >= REQUIRED_ANSWERS && !isProcessing && (
+                {!isProcessing && (
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                     <div className="flex flex-col gap-1">
                       <button
@@ -3723,31 +3748,33 @@ ${finalPRD}
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <button
-                        onClick={generateIterationPlan}
-                        disabled={isProcessing}
+                        onClick={() => {
+                          const userAnswers = detailedChatMessages.filter(m => m.type === 'user').length;
+                          if (userAnswers < REQUIRED_ANSWERS) {
+                            const remaining = REQUIRED_ANSWERS - userAnswers;
+                            if (window.confirm(`아직 ${remaining}개의 질문이 남았습니다.\n\n질문을 건너뛰고 다음 단계로 이동하시겠습니까?\n(더 정확한 PRD를 위해 모든 질문에 답변하는 것을 권장합니다)`)) {
+                              generateIterationPlan();
+                            }
+                          } else {
+                            generateIterationPlan();
+                          }
+                        }}
+                        disabled={isProcessing || detailedChatMessages.filter(m => m.type === 'user').length === 0}
                         className="text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium flex items-center gap-2 rounded-lg px-4 py-2 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
                       >
                         다음
                         <ArrowRight size={14} />
                       </button>
-                      <p className="text-xs text-gray-500 px-3">
-                        Ctrl + Enter로 다음 단계로 이동할 수 있습니다
-                      </p>
+                      {detailedChatMessages.filter(m => m.type === 'user').length < REQUIRED_ANSWERS ? (
+                        <p className="text-xs text-amber-600 px-3">
+                          * 아직 {REQUIRED_ANSWERS - detailedChatMessages.filter(m => m.type === 'user').length}개 질문이 남았습니다
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-500 px-3">
+                          Ctrl + Enter로 다음 단계로 이동할 수 있습니다
+                        </p>
+                      )}
                     </div>
-                  </div>
-                )}
-                {detailedChatMessages.filter(m => m.type === 'user').length < REQUIRED_ANSWERS && (
-                  <div className="mt-2 flex flex-col gap-1">
-                    <button
-                      onClick={goBack}
-                      className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 rounded-lg px-3 py-2 hover:bg-gray-100 transition-colors"
-                    >
-                      <ArrowLeft size={14} />
-                      이전 단계
-                    </button>
-                    <p className="text-xs text-amber-600 px-3">
-                      * 현재 단계 내용이 삭제됩니다
-                    </p>
                   </div>
                 )}
               </div>
@@ -3769,7 +3796,30 @@ ${finalPRD}
                 <div className="mt-4 flex-shrink-0">
                   {detailedChatMessages.filter(m => m.type === 'user').length > 0 && (
                     <div className="mt-4">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">화면 구성 답변 정리</h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-semibold text-gray-900">화면 구성 답변 정리</h4>
+                        <button
+                          onClick={() => {
+                            const qaText = detailedChatMessages
+                              .filter(m => m.type === 'ai' && m.questionIndex !== undefined)
+                              .map((aiMsg) => {
+                                const userAnswer = detailedChatMessages.find(
+                                  (m, i) => m.type === 'user' && i > detailedChatMessages.indexOf(aiMsg)
+                                );
+                                const questionOnly = aiMsg.content.split('\n')[0];
+                                return userAnswer ? `Q: ${questionOnly}\nA: ${userAnswer.content}` : null;
+                              })
+                              .filter(Boolean)
+                              .join('\n\n');
+                            navigator.clipboard.writeText(qaText);
+                            alert('질문-답변이 복사되었습니다!');
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                        >
+                          <Copy size={12} />
+                          복사
+                        </button>
+                      </div>
                       <div ref={detailedQASummaryRef} className="bg-gray-50 p-3 border border-gray-200 rounded overflow-y-auto" style={{height: '340px'}}>
                         <div className="space-y-2.5">
                           {detailedChatMessages
