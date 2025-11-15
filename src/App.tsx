@@ -269,23 +269,34 @@ export default function PRDPromptGenerator() {
     setApiKeyTestResult(null);
 
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (geminiApiKey) {
-        headers['X-Custom-API-Key'] = geminiApiKey;
-      }
-
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ prompt: '안녕하세요. 테스트입니다.' })
-      });
+      // 직접 Gemini API 호출 (로컬 테스트용)
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: '안녕하세요. API 키 테스트입니다.'
+              }]
+            }]
+          })
+        }
+      );
 
       if (response.ok) {
-        setApiKeyTestResult('success');
+        const data = await response.json();
+        if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          setApiKeyTestResult('success');
+        } else {
+          setApiKeyTestResult('error');
+        }
       } else {
+        const errorData = await response.json();
+        console.error('API 키 테스트 에러:', errorData);
         setApiKeyTestResult('error');
       }
     } catch (error) {
@@ -296,7 +307,7 @@ export default function PRDPromptGenerator() {
     }
   };
 
-  // Gemini API 호출 함수 (프록시 사용, 자동 재시도 3회)
+  // Gemini API 호출 함수 (직접 호출, 자동 재시도 3회)
   const callGeminiAPI = async (
     prompt: string,
     onProgress?: (progress: number) => void,
@@ -305,21 +316,34 @@ export default function PRDPromptGenerator() {
     const MAX_RETRIES = 3;
 
     try {
-      // 사용자 지정 API 키가 있으면 헤더에 포함
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
+      // API 키 확인 (사용자 키 > 기본 키)
+      const DEFAULT_API_KEY = 'AIzaSyCUtCsVDz82_9pSEsJbtOFOlNfD_rHkMrM';
+      const apiKey = geminiApiKey || DEFAULT_API_KEY;
 
-      if (geminiApiKey) {
-        headers['X-Custom-API-Key'] = geminiApiKey;
-      }
-
-      // Vercel Serverless Function 호출
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ prompt })
-      });
+      // Gemini API 직접 호출
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: prompt
+              }]
+            }],
+            generationConfig: {
+              temperature: 0.3,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 32000,
+              candidateCount: 1,
+            }
+          })
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -330,13 +354,14 @@ export default function PRDPromptGenerator() {
       const data = await response.json();
       console.log('📦 API 응답:', data);
 
-      const { text, usageMetadata } = data;
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!text) {
         throw new Error('API 응답에서 텍스트를 추출할 수 없습니다.');
       }
 
       // 토큰 사용량 정보 추출
+      const usageMetadata = data.usageMetadata;
       if (usageMetadata) {
         const tokenInfo = {
           prompt: usageMetadata.promptTokenCount || 0,
